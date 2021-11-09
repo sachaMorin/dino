@@ -77,12 +77,17 @@ class Attention(nn.Module):
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
-    def forward(self, x):
+    def forward(self, x, cls_mask=None):
         B, N, C = x.shape
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
         q, k, v = qkv[0], qkv[1], qkv[2]
 
         attn = (q @ k.transpose(-2, -1)) * self.scale
+
+        # Mask attentions of the CLS token
+        if cls_mask is not None:
+            attn[0, :, 0, 1:] *= cls_mask.reshape((1, -1))
+            
         attn = attn.softmax(dim=-1)
         attn = self.attn_drop(attn)
 
@@ -104,8 +109,8 @@ class Block(nn.Module):
         mlp_hidden_dim = int(dim * mlp_ratio)
         self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
 
-    def forward(self, x, return_attention=False):
-        y, attn = self.attn(self.norm1(x))
+    def forward(self, x, return_attention=False, cls_mask=None):
+        y, attn = self.attn(self.norm1(x), cls_mask=cls_mask)
         if return_attention:
             return attn
         x = x + self.drop_path(y)
@@ -206,21 +211,24 @@ class VisionTransformer(nn.Module):
 
         return self.pos_drop(x)
 
-    def forward(self, x):
+    def forward(self, x, cls_mask=None):
         x = self.prepare_tokens(x)
-        for blk in self.blocks:
-            x = blk(x)
+        for i, blk in enumerate(self.blocks):
+            if i < len(self.blocks) - 1:
+                x = blk(x)
+            else:
+                x = blk(x, cls_mask=cls_mask)
         x = self.norm(x)
         return x[:, 0]
 
-    def get_last_selfattention(self, x):
+    def get_last_selfattention(self, x, cls_mask=None):
         x = self.prepare_tokens(x)
         for i, blk in enumerate(self.blocks):
             if i < len(self.blocks) - 1:
                 x = blk(x)
             else:
                 # return attention of the last block
-                return blk(x, return_attention=True)
+                return blk(x, cls_mask=cls_mask, return_attention=True)
 
     def get_intermediate_layers(self, x, n=1):
         x = self.prepare_tokens(x)
