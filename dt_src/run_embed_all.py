@@ -22,13 +22,15 @@ model = get_dino(PATCH_SIZE)
 z = list()  # Super pixel embedding accumulator
 z_img = list() # Whole image embedding accumulator
 # Iterate over some frames in the duckietown dataset
-for frame_no in [402, 1000, 1200, 1400]:
-    print(f'Processing grame no {frame_no}...')
+i = 0
+path = os.path.join('..', 'data', 'dt', 'frames')
+for image_name in os.listdir(path):
+    print(f'Processing frame no {i}...')
+    i+= 1
     # Load image
-    image_path = os.path.join('..', 'data', 'dt', 'frames', f'frame_{str(frame_no).zfill(6)}.png')
-    if not os.path.exists(image_path):
+    if not image_name.endswith('.png'):
         continue
-    with open(image_path, 'rb') as f:
+    with open(os.path.join(path, image_name), 'rb') as f:
         img = Image.open(f)
         img = img.convert('RGB')
     img_dino = transform_img(img)
