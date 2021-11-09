@@ -109,13 +109,17 @@ class Block(nn.Module):
         mlp_hidden_dim = int(dim * mlp_ratio)
         self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
 
-    def forward(self, x, return_attention=False, cls_mask=None):
+    def forward(self, x, return_attention=False, cls_mask=None, return_both=False):
         y, attn = self.attn(self.norm1(x), cls_mask=cls_mask)
-        if return_attention:
+        if return_attention and not return_both:
             return attn
         x = x + self.drop_path(y)
         x = x + self.drop_path(self.mlp(self.norm2(x)))
-        return x
+
+        if return_both:
+            return x, attn
+        else:
+            return x
 
 
 class PatchEmbed(nn.Module):
@@ -166,6 +170,7 @@ class VisionTransformer(nn.Module):
         trunc_normal_(self.pos_embed, std=.02)
         trunc_normal_(self.cls_token, std=.02)
         self.apply(self._init_weights)
+        self.x_cache = None
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
@@ -218,6 +223,29 @@ class VisionTransformer(nn.Module):
                 x = blk(x)
             else:
                 x = blk(x, cls_mask=cls_mask)
+        x = self.norm(x)
+        return x[:, 0]
+
+    def forward_warmup(self, x):
+        """Returns the embedding of x as well as the CLS attention over x.
+        Also caches the feature map of x before the last layer. See forward_mask."""
+        x = self.prepare_tokens(x)
+        for i, blk in enumerate(self.blocks):
+            if i < len(self.blocks) - 1:
+                x = blk(x)
+            else:
+                self.x_cache = x.detach().clone()
+                x, attn = blk(x, return_both=True)
+        x = self.norm(x)
+        return x[:, 0], attn
+
+    def forward_mask(self, cls_mask):
+        """Forward pass of the last block on the cached x by applying mask to the attentions.
+
+        You need to run forward_warmup on x first!"""
+        if self.x_cache is None:
+            raise Exception('forward_warmup should be called with x before using forward_mask.')
+        x = self.blocks[-1](self.x_cache, cls_mask=cls_mask)
         x = self.norm(x)
         return x[:, 0]
 

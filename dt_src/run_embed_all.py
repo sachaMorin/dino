@@ -22,7 +22,8 @@ model = get_dino(PATCH_SIZE)
 z = list()  # Super pixel embedding accumulator
 z_img = list() # Whole image embedding accumulator
 # Iterate over some frames in the duckietown dataset
-for frame_no in [402, 1000]:
+for frame_no in [402, 1000, 1200, 1400]:
+    print(f'Processing grame no {frame_no}...')
     # Load image
     image_path = os.path.join('..', 'data', 'dt', 'frames', f'frame_{str(frame_no).zfill(6)}.png')
     if not os.path.exists(image_path):
@@ -33,17 +34,16 @@ for frame_no in [402, 1000]:
     img_dino = transform_img(img)
 
     # Forward pass
-    z_img_i = model(img_dino)
-    attentions = model.get_last_selfattention(img_dino)
+    z_img_i, attentions = model.forward_warmup(img_dino)
+    z_img.append(z_img_i.cpu())
     attentions = process_attentions(attentions)
 
     # Superpixels
     super_pix = compute_att_superpixels(img, attentions, k=K, n_segments=N_SEGMENTS, plot=False)
 
-    # TODO : this is prototype code. We redo inference on the whole image k times, which is unefficient.
-    # TODO : To be improved. We only need to recompute the last MLP after masking the attention.
-    z += [model(img_dino, cls_mask=p).cpu() for p in super_pix]
-    z_img.append(z_img_i.cpu())
+    # Get super pixel embeddings
+    # forward_mask only runs the last block with the masked attentions, much faster than running the full architecture
+    z += [model.forward_mask(p).cpu() for p in super_pix]
 
 # Save super pixel embeddings
 z = torch.cat(z).detach().cpu().numpy()
