@@ -3,7 +3,7 @@ import os
 
 import numpy as np
 import torch
-from PIL import Image, ImageFilter
+from PIL import Image
 from torchvision import transforms as pth_transforms
 from skimage.segmentation import slic
 from dt_utils import get_dino, transform_img, process_attentions
@@ -71,7 +71,7 @@ def compute_att_superpixels(image, attentions, k, n_segments=200, patch_size=8, 
         # Find top regions
         top_regions = torch.zeros(seg_img.shape).to(attentions.device)
 
-        for i, o in enumerate(order[-20:]):
+        for i, o in enumerate(order[-k:]):
             top_regions += i * (seg_img == o)
 
         fig, axes = plt.subplots(1, 3, figsize=(12, 4))
@@ -91,16 +91,16 @@ def compute_att_superpixels(image, attentions, k, n_segments=200, patch_size=8, 
 
 
 if __name__ == '__main__':
-    # Test script
+    # Script to visualize attention super pixels of a few image
     # Load model
     model = get_dino(PATCH_SIZE)
 
     # Iterate over some frames in the duckietown dataset
-    # for frame_no in [32, 402, 771, 910, 1045, 1142, 1313, 1332, 1000, 1508]:
-    for frame_no in [32, 402, 771]:
+    for frame_no in [32, 402]:
         # Load image
-        frame_no = str(frame_no)
-        image_path = os.path.join('..', 'data', 'dt', 'frames', f'frame_{frame_no.zfill(6)}.png')
+        image_path = os.path.join('..', 'data', 'dt', 'frames', f'frame_{str(frame_no).zfill(6)}.png')
+        if not os.path.exists(image_path):
+            continue
         with open(image_path, 'rb') as f:
             img = Image.open(f)
             img = img.convert('RGB')
@@ -110,5 +110,6 @@ if __name__ == '__main__':
         attentions = model.get_last_selfattention(img_dino)
         attentions = process_attentions(attentions)
 
-        # Superpixels
-        super_pix = compute_att_superpixels(img, attentions, 20, plot=True)
+        # Top 10 superpixels
+        super_pix = compute_att_superpixels(img, attentions, k=10, n_segments=200, plot=True)
+
