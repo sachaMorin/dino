@@ -1,31 +1,16 @@
-import random
 import os
-import cv2
-import matplotlib.pyplot as plt
 import argparse
 import torch
-from typing import List
+import yaml
 
 # detectron2 utils
 import detectron2
 from detectron2.engine import DefaultTrainer
 from detectron2.config import get_cfg
-from detectron2.utils.visualizer import Visualizer
 from detectron2.data import DatasetCatalog, MetadataCatalog
-from detectron2 import model_zoo
 
 from dino.utils.data_preparation import train_test_split, get_duckietown_dicts
-from dino.utils.visualization import visualize_predictions
-
-
-def visualiza_predictions(duckietown_metadata: detectron2.data.catalog.Metadata,
-                          dataset_dicts: List):
-    for d in random.sample(dataset_dicts, 3):
-        img = cv2.imread(d["file_name"])
-        visualizer = Visualizer(img[:, :, ::-1], metadata=metadata, scale=0.5)
-        out = visualizer.draw_dataset_dict(d)
-        plt.imshow(out.get_image())
-        plt.show()
+from dino.utils.visualization import visualize_dataset
 
 
 def main(params):
@@ -40,36 +25,59 @@ def main(params):
     # Visualizing a random image
     duckietown_metadata = MetadataCatalog.get('duckietown_train')
     dataset_dicts = get_duckietown_dicts(os.path.join(params.dataset_path, 'train'))
-    visualize_predictions(duckietown_metadata, dataset_dicts, 5)
+    visualize_dataset(duckietown_metadata, dataset_dicts, 5)
     # %% Training Routine %%#
     cfg = get_cfg()
-    cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml"))
+    cfg.merge_from_file(params.config_file)
     cfg.DATASETS.TRAIN = ("duckietown_train",)
-    cfg.DATASETS.TEST = ("duckietown_test")  # no metrics implemented for this dataset
+    cfg.DATASETS.TEST = ("duckietown_test",)
     cfg.DATALOADER.NUM_WORKERS = 2
-    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
-    cfg.SOLVER.IMS_PER_BATCH = 4 # 12
+    cfg.MODEL.WEIGHTS = params.model_weights
+    cfg.SOLVER.IMS_PER_BATCH = 12
     cfg.SOLVER.BASE_LR = 0.015
-    cfg.SOLVER.MAX_ITER = 1500 # 15000
-    cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 16  # 128
-    cfg.MODEL.ROI_HEADS.NUM_CLASSES = len(class_list)  # (kitti)
-    cfg.OUTPUT_DIR = os.path.join('models/Detectron/checkpoints')
+    cfg.SOLVER.MAX_ITER = 1500
+    cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128
+    cfg.MODEL.ROI_HEADS.NUM_CLASSES = len(class_list)  # Number of classes
+    cfg.TEST.EVAL_PERIOD = 1000
+    cfg.OUTPUT_DIR = params.output_dir
+    # Save config file
+    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
+    final_config = cfg.dump()
+    yaml_config = yaml.full_load(final_config)
+    with open(os.path.join(params.output_dir, 'cfg.yaml'), 'w') as f:
+        yaml.dump(yaml_config, f, default_flow_style=False)
     # Saving config
-    torch.save({'cfg': cfg}, cfg.OUTPUT_DIR + '/' + 'test' + '_cfg.final')
     trainer = DefaultTrainer(cfg)
     trainer.resume_or_load(resume=True)
     print("Start training")
     trainer.train()
     print('Saving model')
-    torch.save(trainer.model, 'models/Detectron/checkpoints/test.pth')
+    torch.save(trainer.model, os.path.join(params.output_dir, 'model.pth'))
 
 
 if __name__ == '__main__':
     # Receive arguments
     parser = argparse.ArgumentParser()
+    # Dino args for debugging
     parser.add_argument("--dataset_path", default='data/dt',
                         type=str, help="Path of the dataset.")
     parser.add_argument("--fraction_test", default=0.5,
                         type=float, help="Percentage of test set.")
+    parser.add_argument("--config_file", default='models/Dino/faster_rcnn_R_50_FPN_3x.yaml',
+                        type=str, help="Path to configuration file")
+    parser.add_argument("--model_weights", default='models/Dino/dino_resnet50_pretrain.pth',
+                        type=str, help="Path to model weights.")
+    parser.add_argument("--output_dir", default='models/detectron/checkpoints/dino',
+                        type=str, help="Path to store results.")
+    # parser.add_argument("--dataset_path", default='data/dt',
+    #                     type=str, help="Path of the dataset.")
+    # parser.add_argument("--fraction_test", default=0.5,
+    #                     type=float, help="Percentage of test set.")
+    # parser.add_argument("--config_file", default='models/detectron/faster_rcnn_R_50_FPN_3x.yaml',
+    #                     type=str, help="Path to configuration file")
+    # parser.add_argument("--model_weights", default='models/detectron/model_final_280758.pkl',
+    #                     type=str, help="Path to model weights.")
+    # parser.add_argument("--output_dir", default='models/detectron/checkpoints/baseline',
+    #                     type=str, help="Path to store results.")
     args = parser.parse_args()
     main(args)
