@@ -33,10 +33,10 @@ def main(params):
     cfg.DATASETS.TEST = ("duckietown_test",)
     cfg.DATALOADER.NUM_WORKERS = 2
     cfg.MODEL.WEIGHTS = params.model_weights
-    cfg.SOLVER.IMS_PER_BATCH = 12
-    cfg.SOLVER.BASE_LR = 0.015
-    cfg.SOLVER.MAX_ITER = 1500
-    cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128
+    cfg.SOLVER.IMS_PER_BATCH = 6
+    cfg.SOLVER.BASE_LR = 0.015 # Learning rate for DINO set to 0.0003
+    cfg.SOLVER.MAX_ITER = 2000
+    cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 256
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = len(class_list)  # Number of classes
     cfg.TEST.EVAL_PERIOD = 1000
     cfg.OUTPUT_DIR = params.output_dir
@@ -58,26 +58,15 @@ def main(params):
 if __name__ == '__main__':
     # Receive arguments
     parser = argparse.ArgumentParser()
-    # Dino args for debugging
     parser.add_argument("--dataset_path", default='data/dt',
                         type=str, help="Path of the dataset.")
     parser.add_argument("--fraction_test", default=0.5,
                         type=float, help="Percentage of test set.")
-    parser.add_argument("--config_file", default='models/Dino/faster_rcnn_R_50_FPN_3x.yaml',
+    parser.add_argument("--config_file", default='models/detectron/faster_rcnn_R_50_FPN_3x.yaml',
                         type=str, help="Path to configuration file")
-    parser.add_argument("--model_weights", default='models/Dino/dino_resnet50_pretrain.pth',
+    parser.add_argument("--model_weights", default='models/detectron/model_final_280758.pkl',
                         type=str, help="Path to model weights.")
-    parser.add_argument("--output_dir", default='models/detectron/checkpoints/dino',
+    parser.add_argument("--output_dir", default='models/detectron/checkpoints/baseline',
                         type=str, help="Path to store results.")
-    # parser.add_argument("--dataset_path", default='data/dt',
-    #                     type=str, help="Path of the dataset.")
-    # parser.add_argument("--fraction_test", default=0.5,
-    #                     type=float, help="Percentage of test set.")
-    # parser.add_argument("--config_file", default='models/detectron/faster_rcnn_R_50_FPN_3x.yaml',
-    #                     type=str, help="Path to configuration file")
-    # parser.add_argument("--model_weights", default='models/detectron/model_final_280758.pkl',
-    #                     type=str, help="Path to model weights.")
-    # parser.add_argument("--output_dir", default='models/detectron/checkpoints/baseline',
-    #                     type=str, help="Path to store results.")
     args = parser.parse_args()
     main(args)
