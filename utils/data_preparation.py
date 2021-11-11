@@ -78,12 +78,13 @@ def get_duckietown_dicts(dataset_path: str) -> List:
         data = json.load(f)
 
     dataset_dicts = []
-    for image_id in data.keys():
+    for idx, image_id in enumerate(data.keys()):
         image_name = os.path.join(frame_path, image_id)
         record = {}
         height, width = cv2.imread(image_name).shape[:2]
 
         record["file_name"] = image_name
+        record["image_id"] = idx
         record["height"] = height
         record["width"] = width
 
