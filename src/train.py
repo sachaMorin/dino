@@ -9,8 +9,8 @@ from detectron2.engine import DefaultTrainer
 from detectron2.config import get_cfg
 from detectron2.data import DatasetCatalog, MetadataCatalog
 
-from dino.utils.data_preparation import train_test_split, get_duckietown_dicts
-from dino.utils.visualization import visualize_dataset
+from dino.lib.data_preparation import train_test_split, get_duckietown_dicts
+from dino.lib.visualization import visualize_dataset
 
 
 def main(params):
@@ -26,7 +26,7 @@ def main(params):
     duckietown_metadata = MetadataCatalog.get('duckietown_train')
     dataset_dicts = get_duckietown_dicts(os.path.join(params.dataset_path, 'train'))
     visualize_dataset(duckietown_metadata, dataset_dicts, 5)
-    # %% Training Routine %%#
+    # Training Routine %%#
     cfg = get_cfg()
     cfg.merge_from_file(params.config_file)
     cfg.DATASETS.TRAIN = ("duckietown_train",)

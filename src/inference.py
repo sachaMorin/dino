@@ -10,8 +10,8 @@ from detectron2.config import get_cfg
 from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.engine import DefaultPredictor
 
-from dino.utils.data_preparation import get_duckietown_dicts
-from dino.utils.visualization import visualize_predictions
+from dino.lib.data_preparation import get_duckietown_dicts
+from dino.lib.visualization import visualize_predictions
 # Evaluation imports
 from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 from detectron2.data import build_detection_test_loader
@@ -21,6 +21,7 @@ def main(params):
     cfg = get_cfg()
     cfg.merge_from_file(params.config_file)
     cfg.MODEL.WEIGHTS = params.model_weights  # path to the model we just trained
+    cfg.OUTPUT_DIR = params.output_dir
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = params.iou_threshold  # set a custom testing threshold
     # Duckietown classes
     class_list = ['cone', 'duckie', 'duckiebot']
