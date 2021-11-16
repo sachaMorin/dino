@@ -32,8 +32,9 @@ def plot_image(img_path: str) -> None:
     cfg.merge_from_file(model_zoo.get_config_file(
         "COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml"))  # Get the basic model configuration from the model zoo
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.6  # set the testing threshold for this model
-    cfg.MODEL.WEIGHTS = 'models/Detectron/model_final_280758.pkl'  # Let training initialize from model zoo
+    cfg.MODEL.WEIGHTS = 'models/detectron/model_final_280758.pkl'  # Let training initialize from model zoo
     predictor = DefaultPredictor(cfg)
+    print(cfg)
     # Inference on Image
     outputs = predictor(im[..., ::-1])
 
