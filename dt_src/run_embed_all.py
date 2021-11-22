@@ -6,9 +6,8 @@ import os
 
 import numpy as np
 import torch
-from PIL import Image
 
-from dt_utils import get_dino, transform_img, process_attentions
+from dt_utils import get_dino, transform_img, process_attentions, dt_frames
 from att_superpixels import compute_att_superpixels
 
 PATCH_SIZE = 8
@@ -22,17 +21,8 @@ model = get_dino(PATCH_SIZE)
 z = list()  # Super pixel embedding accumulator
 z_img = list() # Whole image embedding accumulator
 # Iterate over some frames in the duckietown dataset
-i = 0
-path = os.path.join('..', 'data', 'dt', 'frames')
-for image_name in os.listdir(path):
+for i, img in dt_frames(path=os.path.join('..', 'data', 'custom')):
     print(f'Processing frame no {i}...')
-    i+= 1
-    # Load image
-    if not image_name.endswith('.png'):
-        continue
-    with open(os.path.join(path, image_name), 'rb') as f:
-        img = Image.open(f)
-        img = img.convert('RGB')
     img_dino = transform_img(img)
 
     # Forward pass
