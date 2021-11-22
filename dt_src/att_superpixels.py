@@ -46,14 +46,20 @@ def compute_att_superpixels(image, attentions, k, n_segments=200, patch_size=8, 
     seg_img = slic(small_img.cpu().detach().numpy(), n_segments=n_segments, enforce_connectivity=True)
     seg_img = torch.from_numpy(seg_img).to(attentions.device)
 
+
+    # Blur attention
+    # attentions = pth_transforms.GaussianBlur(kernel_size=11, sigma=(20))(attentions)
+
     # Find top k superpixels with most attention
     att_sum = attentions.sum(axis=0)
+
     masks = torch.zeros((n_segments, att_sum.shape[0], att_sum.shape[1])).to(att_sum.device)
     for i in range(n_segments):
         masks[i] = seg_img == i
     mask_sum = masks.sum(axis=-1).sum(axis=-1)
     mask_sum[mask_sum == 0] = 1 # Avoid division by 0
     sums = (masks * att_sum).sum(axis=-1).sum(axis=-1)/mask_sum
+    # sums = (masks * att_sum).max(axis=-1).values.max(axis=-1).values
 
     order = sums.argsort()
 
@@ -66,7 +72,7 @@ def compute_att_superpixels(image, attentions, k, n_segments=200, patch_size=8, 
             pth_transforms.Resize((480, 480)),
             pth_transforms.ToTensor(),
         ])
-        img_og = transform(img).squeeze(0).permute((1, 2, 0))
+        img_og = transform(image).squeeze(0).permute((1, 2, 0))
 
         # Find top regions
         top_regions = torch.zeros(seg_img.shape).to(attentions.device)
@@ -96,7 +102,7 @@ if __name__ == '__main__':
     model = get_dino(PATCH_SIZE)
 
     # Iterate over some frames in the duckietown dataset
-    for frame_no in [32, 402]:
+    for frame_no in [32, 402, 800, 1000, 1200, 1600]:
         # Load image
         image_path = os.path.join('..', 'data', 'dt', 'frames', f'frame_{str(frame_no).zfill(6)}.png')
         if not os.path.exists(image_path):
@@ -111,5 +117,5 @@ if __name__ == '__main__':
         attentions = process_attentions(attentions)
 
         # Top 10 superpixels
-        super_pix = compute_att_superpixels(img, attentions, k=10, n_segments=200, plot=True)
+        super_pix = compute_att_superpixels(img, attentions, k=70, n_segments=200, plot=True)
 
