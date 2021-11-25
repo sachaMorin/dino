@@ -13,19 +13,21 @@ import matplotlib.pyplot as plt
 PATCH_SIZE = 8
 
 
-def compute_att_superpixels(image, attentions, k, n_segments=200, patch_size=8, plot=False):
+def compute_att_superpixels(image, n_segments=200, patch_size=8, attentions=None, k=None, plot=False, device='cpu'):
     """Computes top k attention superpixels.
 
     Compute superpixels over the base image (downsized to patch size) and returns the masks of the top
-    k superpixels in terms of average transformer attention.
+    k superpixels in terms of average transformer attention. Attention can also be omitted to simply return
+    all masks.
 
     Args:
         image(torch.Tensor):
-        attentions(torch.Tensor): Attentions of the CLS token.
         n_segments(int): Number of superpixels to consider.
-        k(int): Number of superpixels to keep (in terms of average attention).
         patch_size(int): Patch size of the transformer architecture.
+        k(int): Number of superpixels to keep (in terms of average attention). Ignored if Attention is none.
         plot(bool): Plot image, average attention and selected superpixels.
+        attentions(torch.Tensor): Attentions of the CLS token.
+        device(str): Torch device.
 
     Returns:
         torch.Tensor: Tensor of size (k, image_height, image_width) where each channel is a superpixel mask.
@@ -35,7 +37,7 @@ def compute_att_superpixels(image, attentions, k, n_segments=200, patch_size=8, 
     # Downsize image to patch dimensions
     transform = pth_transforms.Compose([
         pth_transforms.Resize((480//patch_size, 480//patch_size)),
-        pth_transforms.ToTensor(),
+        # pth_transforms.ToTensor(),
     ])
     small_img = transform(image)
 
@@ -44,29 +46,31 @@ def compute_att_superpixels(image, attentions, k, n_segments=200, patch_size=8, 
 
     # Run SLIC on small image
     seg_img = slic(small_img.cpu().detach().numpy(), n_segments=n_segments, enforce_connectivity=True)
-    seg_img = torch.from_numpy(seg_img).to(attentions.device)
+    seg_img = torch.from_numpy(seg_img).to(device)
 
-
-    # Blur attention
-    # attentions = pth_transforms.GaussianBlur(kernel_size=11, sigma=(20))(attentions)
-
-    # Find top k superpixels with most attention
-    att_sum = attentions.sum(axis=0)
-
-    masks = torch.zeros((n_segments, att_sum.shape[0], att_sum.shape[1])).to(att_sum.device)
+    masks = torch.zeros((n_segments, seg_img.shape[0], seg_img.shape[1])).to(device)
     for i in range(n_segments):
         masks[i] = seg_img == i
-    mask_sum = masks.sum(axis=-1).sum(axis=-1)
-    mask_sum[mask_sum == 0] = 1 # Avoid division by 0
-    sums = (masks * att_sum).sum(axis=-1).sum(axis=-1)/mask_sum
-    # sums = (masks * att_sum).max(axis=-1).values.max(axis=-1).values
 
-    order = sums.argsort()
+    # Find top k superpixels with most attention
+    if attentions is not None:
+        # Note : I stopped using this block. Needs to be retested if used.
+        att_sum = attentions.sum(axis=0)
 
-    # Keep only masks of top pixels
-    result = masks[order[-k:]]
+        mask_sum = masks.sum(axis=-1).sum(axis=-1)
+        mask_sum[mask_sum == 0] = 1 # Avoid division by 0
+        sums = (masks * att_sum).sum(axis=-1).sum(axis=-1)/mask_sum
+        # sums = (masks * att_sum).max(axis=-1).values.max(axis=-1).values
 
-    if plot :
+        order = sums.argsort()
+
+        # Keep only masks of top super pixels with top attention
+        result = masks[order[-k:]]
+    else:
+        # Keep all masks
+        result = masks
+
+    if plot and attentions is not None:
         # Get a 480x480 copy of the original image for visualizing purposes
         transform = pth_transforms.Compose([
             pth_transforms.Resize((480, 480)),
@@ -75,7 +79,7 @@ def compute_att_superpixels(image, attentions, k, n_segments=200, patch_size=8, 
         img_og = transform(image).squeeze(0).permute((1, 2, 0))
 
         # Find top regions
-        top_regions = torch.zeros(seg_img.shape).to(attentions.device)
+        top_regions = torch.zeros(seg_img.shape).to(image.device)
 
         for i, o in enumerate(order[-k:]):
             top_regions += i * (seg_img == o)

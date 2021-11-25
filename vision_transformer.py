@@ -86,8 +86,18 @@ class Attention(nn.Module):
 
         # Mask attentions of the CLS token
         if cls_mask is not None:
-            attn[0, :, 0, 1:] *= cls_mask.reshape((1, -1))
-            
+            N = cls_mask.shape[0]
+
+            # Flatten attention masks and add a vector of one if the first position
+            # for the CLS attention
+            cls_col = torch.zeros((cls_mask.shape[0], 1)).to(attn.device)
+            cls_mask = cls_mask.reshape((cls_mask.shape[0], -1))
+            cls_mask = torch.hstack((cls_col, cls_mask))
+
+            # Only consider the attention of the CLS token, we don't care about the embedding
+            # of all other patches
+            attn = attn[0:1, :, 0:1, :] * cls_mask
+
         attn = attn.softmax(dim=-1)
         attn = self.attn_drop(attn)
 
@@ -113,6 +123,14 @@ class Block(nn.Module):
         y, attn = self.attn(self.norm1(x), cls_mask=cls_mask)
         if return_attention and not return_both:
             return attn
+
+        if cls_mask is not None:
+            N = cls_mask.shape[0]
+            # Clone the representation of the CLS token N times to match the
+            # N residuals we have in attn
+            x = x[:, 0:1, :]  # 0:1 is a hack to preserve dimensions
+            x = x.repeat(1, N, 1)
+
         x = x + self.drop_path(y)
         x = x + self.drop_path(self.mlp(self.norm2(x)))
 
@@ -216,7 +234,31 @@ class VisionTransformer(nn.Module):
 
         return self.pos_drop(x)
 
-    def forward(self, x, cls_mask=None):
+    def forward(self, x):
+        x = self.prepare_tokens(x)
+        for i, blk in enumerate(self.blocks):
+            if i < len(self.blocks) - 1:
+                x = blk(x)
+            else:
+                # Mask the attention of the last block with N masks to obtain N different embeddings
+                x = blk(x)
+        x = self.norm(x)
+        return x[:, 0]
+
+    def forward_mask(self, x, cls_mask):
+        """Forward pass, but we apply the N masks in cls_mask to the attention of the last block
+        to obtain an embedding for each mask.
+
+        Args:
+            x(torch.Tensor): A single input tensor of size (1, 3, image_height, image_width)
+            cls_mask(torch.Tensor): Tensor of size (N, image_patch_height, image_patch_width) representing
+            the N masks to be applied to the attention of last block. Dimensions should match the "patchified"
+            dimensions and depends on the patch_size of the architecture.
+
+        Returns:
+            torch.Tensor: Tensor of size (N, embedding_size) containing the mask embeddings.
+
+        """
         x = self.prepare_tokens(x)
         for i, blk in enumerate(self.blocks):
             if i < len(self.blocks) - 1:
@@ -224,30 +266,7 @@ class VisionTransformer(nn.Module):
             else:
                 x = blk(x, cls_mask=cls_mask)
         x = self.norm(x)
-        return x[:, 0]
-
-    def forward_warmup(self, x):
-        """Returns the embedding of x as well as the CLS attention over x.
-        Also caches the feature map of x before the last layer. See forward_mask."""
-        x = self.prepare_tokens(x)
-        for i, blk in enumerate(self.blocks):
-            if i < len(self.blocks) - 1:
-                x = blk(x)
-            else:
-                self.x_cache = x.detach().clone()
-                x, attn = blk(x, return_both=True)
-        x = self.norm(x)
-        return x[:, 0], attn
-
-    def forward_mask(self, cls_mask):
-        """Forward pass of the last block on the cached x by applying mask to the attentions.
-
-        You need to run forward_warmup on x first!"""
-        if self.x_cache is None:
-            raise Exception('forward_warmup should be called with x before using forward_mask.')
-        x = self.blocks[-1](self.x_cache, cls_mask=cls_mask)
-        x = self.norm(x)
-        return x[:, 0]
+        return x[0]
 
     def get_last_selfattention(self, x, cls_mask=None):
         x = self.prepare_tokens(x)
