@@ -1,3 +1,7 @@
+"""This script runs segmentation on the duckietown object detection dataset.
+
+Can be used to visualize segmentation result or save segmentation for the whole dataset.
+The dataset should first be embedded with run_embed_all.py."""
 import os
 
 import joblib
@@ -7,111 +11,92 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
-from umap import UMAP
 
-from dt_utils import get_dino, transform_img, process_attentions, dt_frames
+from dt_utils import get_dino, transform_img, dt_frames
 from att_superpixels import compute_att_superpixels
 
-REFIT = False  # Refit K-Means and PCA
-K = 50
-N_SEGMENTS = 200
-N_CLUSTERS = 30
+SAVE_ALL = False  # Save png or plot results
+VIEW_PCA = True
+REFIT = False # Refit K-Means and PCA
+N_SEGMENTS = 600
+N_CLUSTERS = 30  # Number of clusters for K-Means
 
-norm = 'mean'
+norm = 'standard_scale'  # Image wise normalization, 'standard_scale', 'sum' or None
 
-# This is for K = 50 (standard normalization) and 12 clusters
-cmap = ListedColormap([
-    'gray',
-    'yellow',
-    'gray',
-    'red',
-    'gray',
-    'orange',
-    'pink',
-    'white',
-    'red',
-    'red',
-    'gray',
-    'gray',
-    'orange',
-])
-
-# Standard normalized and 18 clusters
-cmap = ListedColormap([
-    'gray',
-    'gray',
-    'white',
-    'gray',
-    'gray',  # Duckiebot but messy
-    'gray',
-    'gray',
-    'orange',
-    'red',
-    'orange',
-    'gray',  # Grass
-    'red',
-    'white',
-    'black',
-    'gray',
-    'gray',  # Close road
-    'red',
-    'yellow',
-    'pink',
-])
-
-# Standard normalized and 30 clusters
-cmap = ListedColormap([
-    'gray',
-    'gray',  # Signs?
-    'gray',
-    'red',  # Red tape?
-    'gray',  # Close road
-    'blue',
-    'blue',
-    'white',
-    'blue',
-    'k',
-    'gray',
-    'gray',
-    'gray',
-    'gold',
-    'gray',  # Messy duckiebot
-    'white',
-    'gray',
-    'blue',  # Front lights
-    'gray',
-    'gray',
-    'gray', #Grass
-    'white',
-    'k', # Wheels?
-    'gold',
-    'lightgray', #oomans
-    'lightgray',
-    'white',
-    'gray',
-    'blue',  # Front Dash
-    'yellow',
-    'yellow',
-])
+# Color scheme for standard normalized and 30 clusters
+# To do potentially reassign clusters
+class_list = [
+    'bg',  # 0 (unlabeled) class. The rest are clusters.
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+    'bg',
+]
+color_d = dict(
+    duckie='gold',
+    bot='blue',
+    wheel='k',
+    human='lightgray',
+    w_lane='white',
+    y_lane='yellow',
+    stop='red',
+    road='gray',
+    side='gray',
+    bg='gray',
+    # Test colors for exploration
+    m='magenta',
+    l='lime',
+    c='cyan',
+    s='salmon',
+)
+cmap = ListedColormap([color_d[i] for i in class_list])
 
 # Load embeddings
 z = np.load(os.path.join('..', 'results', 'z_superpixels.npy'))
-z_img = np.load(os.path.join('..', 'results', 'z_images.npy'))
+# z_img = np.load(os.path.join('..', 'results', 'z_images.npy'))
 
 # Standardize superpixels from the same image
 mean = list()  # Memorize normalization
 std = list()
-for i, z_i in enumerate(z_img):
-    if norm == 'mean':
+for i in range(int(z.shape[0]//N_SEGMENTS)):
+    K = N_SEGMENTS
+    if norm == 'standard_scale':
         m = z[i*K:(i+1)*K].mean(axis=0)
         s = z[i*K:(i+1)*K].std(axis=0)
         z[i*K:(i+1)*K] -= m
         z[i*K:(i+1)*K] /= s
         mean.append(m)
         std.append(s)
-    else:
+    elif norm == 'sum':
         z /= z.sum(axis=1, keepdims=True)
-
+    else:
+        pass
 
 # KMeans and PCA on DINO space
 if REFIT:
@@ -127,57 +112,61 @@ if REFIT:
 
 # Load prefit estimators
 m = joblib.load(os.path.join('..', 'results', 'kmeans.joblib.pkl'))
-dr = joblib.load(os.path.join('..', 'results', 'dr.pkl'))
-clr = m.predict(z)
-z_pca = dr.transform(z)
+clr = m.predict(z) + 1  # Add 1 to keep the zero token as no label
 
 # Visualize results
 # Add a dummy point to shift the color scheme (to match the image we'll display where 0 is already background)
-clr = np.concatenate((clr, [-1]))
-z_pca = np.vstack((z_pca, z_pca.mean(axis=0)))
-plt.scatter(*z_pca.T, c=clr + 1, cmap=cmap)
-plt.show()
+if VIEW_PCA:
+    dr = joblib.load(os.path.join('..', 'results', 'dr.pkl'))
+    clr = np.concatenate((clr, [-1]))
+    z_pca = dr.transform(z)
+    z_pca = np.vstack((z_pca, z_pca.mean(axis=0)))
+    plt.scatter(*z_pca.T, c=clr, cmap=cmap)
+    plt.show()
 
 
 # Visualize cluster assignments of some frames
 model = get_dino(8)
 
-for i, img in dt_frames([817, 838, 386, 1769, 268, 1572, 374, 49, 1396, 97, 1319, 923]):
-# for i, img in dt_frames(list(range(1, 1950, 75))):
-# for i, img in dt_frames(path=os.path.join('..', 'data', 'custom')):
-# for i, img in dt_frames(subset=[18, 48, 817, 838, 1769, 1572]):
+# If SAVE_ALL, save visualization for all images. Else visualize a few images with plt.show().
+images_idx = None if SAVE_ALL else [817, 838, 386, 1769, 268, 1572, 374, 49, 1396, 97, 1319, 923, 50, 100, 150, 200, 250, 300, 350, 400, 500, 600, 700, 800, 900, 1000, 1100]
+
+
+for i, img in dt_frames(images_idx):
     # Load image
     img_dino = transform_img(img)
 
-    # Forward pass
-    _, attentions = model.forward_warmup(img_dino)
-    attentions = process_attentions(attentions)
+    # Compute super pixels and use them as masks
+    super_pix = compute_att_superpixels(img_dino, n_segments=N_SEGMENTS, plot=False, device=img_dino.device)
 
-    # Superpixels
-    super_pix = compute_att_superpixels(img, attentions, k=200, n_segments=N_SEGMENTS, plot=False)
-    z_i = torch.cat([model.forward_mask(p).cpu() for p in super_pix]).detach().cpu().numpy()
-    if norm == 'mean':
+    # Masked forward pass to get an embedding per mask
+    z_i = model.forward_mask(img_dino, super_pix).cpu().numpy()
+
+    if norm == 'standard_scale':
         z_i -= z_i[-K:].mean(axis=0, keepdims=True)
         z_i /= z_i[-K:].std(axis=0, keepdims=True)
-    else:
+    elif norm == 'sum':
         z_i/=z_i.sum(axis=1, keepdims=True)
-    c = m.predict(z_i)
+    else:
+        pass
+    c = m.predict(z_i) + 1
 
     # Get image with cluster assignment
-    super_pix *= torch.Tensor(c).to(super_pix.device).reshape((-1, 1, 1)) + 1
+    super_pix *= torch.Tensor(c).to(super_pix.device).reshape((-1, 1, 1))
     img_clr = super_pix.sum(axis=0).cpu().detach().numpy()
     img_clr[-1, -N_CLUSTERS-1:] = np.arange(N_CLUSTERS+1)   # This is a hack to force the same color scheme on all images
 
     fig, axes = plt.subplots(1, 2, figsize=(10, 6))
     axes[0].set_title('Image', fontsize=20)
     axes[0].imshow(img.resize((480, 480)))
-    # axes[1].set_title('Avg. Attention')
-    # axes[1].imshow(attentions.mean(axis=0).cpu().detach().numpy(), cmap='inferno')
     axes[1].set_title(f'Unsupervised DINO Segmentation', fontsize=20)
     axes[1].imshow(img_clr, cmap=cmap)
     for a in axes:
         a.set_xticks([])
         a.set_yticks([])
     plt.tight_layout()
-    # plt.savefig(os.path.join('..', 'results', 'video', f'image_{str(i).zfill(5)}.png'))
-    plt.show()
+
+    if SAVE_ALL :
+        plt.savefig(os.path.join('..', 'results', 'video', f'image_{str(i).zfill(5)}.png'))
+    else:
+        plt.show()
