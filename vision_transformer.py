@@ -234,15 +234,17 @@ class VisionTransformer(nn.Module):
 
         return self.pos_drop(x)
 
-    def forward(self, x):
+    def forward(self, x, all=False):
         x = self.prepare_tokens(x)
         for i, blk in enumerate(self.blocks):
-            if i < len(self.blocks) - 1:
-                x = blk(x)
-            else:
-                # Mask the attention of the last block with N masks to obtain N different embeddings
-                x = blk(x)
+            x = blk(x)
+            if i == 3:
+                return self.norm(x)
         x = self.norm(x)
+
+        if all:
+            return x
+
         return x[:, 0]
 
     def forward_mask(self, x, cls_mask):
