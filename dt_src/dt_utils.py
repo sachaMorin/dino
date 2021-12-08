@@ -6,9 +6,10 @@ import vision_transformer as vits
 from torchvision import transforms as pth_transforms
 from PIL import Image
 
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-def get_dino(patch_size=8):
+
+def get_dino(patch_size=8, device=DEVICE):
     """Load vit_small model and send to device."""
     # From the original DINO code
     # Build model
@@ -24,16 +25,19 @@ def get_dino(patch_size=8):
     return model
 
 
-def transform_img(img, patch_size=8):
+def transform_img(img, patch_size=8, grayscale=False, device=DEVICE):
     """Preprocess an image (PIL or array-like) for DINO compatibility."""
     # From the original DINO code
     # Transform image
-    transform = pth_transforms.Compose([
-        # pth_transforms.GaussianBlur(kernel_size=31, sigma=(50)),
+    t = [pth_transforms.Grayscale(num_output_channels=3)] if grayscale else []
+    t += [
         pth_transforms.Resize((480, 480)),
         pth_transforms.ToTensor(),
-        pth_transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-    ])
+    ]
+    if not grayscale:
+        # Normalize with Image net values
+        t += [pth_transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))]
+    transform = pth_transforms.Compose(t)
     img = transform(img).to(device)
 
     # make the image divisible by the patch size
@@ -72,18 +76,24 @@ def process_attentions(attentions, threshold=None, patch_size=8):
     return attentions
 
 
-def dt_frames(subset=None, max=None, path=os.path.join('..', 'data', 'dt', 'frames')):
+def dt_frames(subset=None, max=None, path=os.path.join('..', 'data', 'dt', 'frames'), label_path=None):
     """Generator to iterate over the dt object detection frames."""
-    files = [os.path.join(path, f) for f in os.listdir(path) if f.endswith('.png') or f.endswith('.jpg')]
+    files = [f for f in os.listdir(path) if f.endswith('.png') or f.endswith('.jpg')]
     files.sort()
     j = 0
     for i, f in enumerate(files):
         if subset is not None and i not in subset:
             continue
-        with open(f, 'rb') as f:
-            img = Image.open(f)
+        with open(os.path.join(path, f), 'rb') as file:
+            img = Image.open(file)
             img = img.convert('RGB')
-        j+=1
-        yield i, img
+        j += 1
+        if label_path is None:
+            yield i, img
+        else:
+            with open(os.path.join(label_path, f), 'rb') as file:
+                mask = Image.open(file)
+                mask = mask.convert('RGB')
+            yield i, img, mask
         if max is not None and j == max:
             break
