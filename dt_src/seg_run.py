@@ -1,4 +1,4 @@
-"""Script to embed the simulation dataset and get segmentation predictions from an MLP, a logistic regression and
+"""Script to embed the simulation dataset and get segmentation predictions from an MLP, a linear classifier and
 a knn classifier.
 
 Train data should be organized in the folder data/dt_sim/train/images and data/dt_sim/train/labels.
@@ -30,7 +30,7 @@ DATA_PATH = os.path.join('..', 'data', 'dt_sim')
 RESULTS_PATH = os.path.join('..', 'results')
 
 # Create class name/id/RGB associations
-# RGB color should reflect the color of the clss in simulator
+# RGB color should reflect the color of the class in simulator
 class_map = [
     ("floor", 0, "000000"),
     ("bg", 1, "ff00ff"),
@@ -301,17 +301,16 @@ def load_reg(device='cuda:0'):
 
 
 if __name__ == '__main__':
+    # Note : you may need to run this step by step (prep data then run or clear GPU memory, then train)
     np.random.seed(42)
 
     # Make sure to run this before training classifiers
-    # prepare_seg_dataset(grayscale=False)
-    # exit()
+    prepare_seg_dataset(grayscale=False)
 
     # Fit MLP and linear regressor to train set
     # Note : they monitor the validation set for early stopping
-    # train_nn(100)
-    # train_reg(100)
-    # exit()
+    train_nn(100)
+    train_reg(100)
 
     # KNN prediction
     x_train, y_train = torch.load(os.path.join(DATA_PATH, 'z_train.pt')).to('cuda'), torch.load(

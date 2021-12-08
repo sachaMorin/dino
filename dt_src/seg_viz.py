@@ -1,6 +1,6 @@
+"""Visualize MLP results from seg_run.py"""
 import os
 
-import torch
 import torch.nn as nn
 
 from skimage import color

@@ -1,3 +1,4 @@
+"""Process output of seg_run.py to show performance metrics."""
 import os
 import pandas as pd
 from seg_run import CLASS_MAP
