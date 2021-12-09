@@ -22,37 +22,25 @@ The trained models can be found online.
 <table>
   <tr>
     <th>arch</th>
-    <th>params</th>
-    <th>k-nn</th>
-    <th>linear</th>
-    <th colspan="6">download</th>
+    <th>AP</th>
+    <th colspan="2">download</th>
   </tr>
   <tr>
-    <td>ViT-S/16</td>
-    <td>21M</td>
-    <td>74.5%</td>
-    <td>77.0%</td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall16_pretrain/dino_deitsmall16_pretrain.pth">backbone only</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall16_pretrain/dino_deitsmall16_pretrain_full_checkpoint.pth">full ckpt</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall16_pretrain/dino_deits16.onnx">onnx</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall16_pretrain/args.txt">args</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall16_pretrain/dino_deitsmall16_pretrain_log.txt">logs</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall16_pretrain/dino_deitsmall16_pretrain_eval_linear_log.txt">eval logs</a></td>
+    <td>Supervised ResNet50 ImageNet</td>
+    <td>62.5%</td>
+    <td><a href="https://drive.google.com/file/d/1TmEJncJRkJJds6r5HRo4aCKsIZ3XZ-V1/view?usp=sharing">model</a></td>
+    <td><a href="https://drive.google.com/file/d/1K6C-WM5T84OSfEguigy6OPfxSbHLiq2I/view?usp=sharing">config</a></td>
+    <td><a href="https://drive.google.com/drive/folders/13wGf16bqCQMmY0YG7nqv947kZvaxXs1k?usp=sharing">results</a></td>
   </tr>
   <tr>
-    <td>ViT-S/8</td>
-    <td>21M</td>
-    <td>78.3%</td>
-    <td>79.7%</td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall8_pretrain/dino_deitsmall8_pretrain.pth">backbone only</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall8_pretrain/dino_deitsmall8_pretrain_full_checkpoint.pth">full ckpt</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall8_pretrain/dino_deits8.onnx">onnx</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall8_pretrain/args.txt">args</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall8_pretrain/dino_deitsmall8_pretrain_log.txt">logs</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall8_pretrain/dino_deitsmall8_pretrain_eval_linear_log.txt">eval logs</a></td>
+    <td>DINO trained ResNet50 ImageNet</td>
+    <td>48.43%</td>
+    <td><a href="https://drive.google.com/file/d/1z5ohKU3RZ_8zcsP0oTcGBwr0eCBDOisS/view?usp=sharing">model</a></td>
+    <td><a href="https://drive.google.com/file/d/1OWhmTz37t6Ru7RXM1PIcxbYlqcootQz1/view?usp=sharing">config</a></td>
+    <td><a href="https://drive.google.com/drive/folders/1pv2NsJIB4AbS_RcBRq9BbGsNu4IkILRz?usp=sharing">results</a></td>
   </tr>
-
 </table>
+
 
 The train-test split used to train the models can be found [here](https://drive.google.com/drive/folders/1Yg-jTkgkjuxtqmL_2B09IJA7FGb2rqD8?usp=sharing). To use the object detection module, please install detectron2 using.
 
@@ -101,22 +89,70 @@ You can choose to download only the weights of the pretrained backbone used for 
 <table>
   <tr>
     <th>arch</th>
-    <th>AP</th>
-    <th colspan="2">download</th>
+    <th>params</th>
+    <th>k-nn</th>
+    <th>linear</th>
+    <th colspan="6">download</th>
   </tr>
   <tr>
-    <td>Supervised ResNet50 ImageNet</td>
-    <td>62.5%</td>
-    <td><a href="https://drive.google.com/file/d/1TmEJncJRkJJds6r5HRo4aCKsIZ3XZ-V1/view?usp=sharing">model</a></td>
-    <td><a href="https://drive.google.com/file/d/1K6C-WM5T84OSfEguigy6OPfxSbHLiq2I/view?usp=sharing">config</a></td>
-    <td><a href="https://drive.google.com/drive/folders/13wGf16bqCQMmY0YG7nqv947kZvaxXs1k?usp=sharing">results</a></td>
+    <td>ViT-S/16</td>
+    <td>21M</td>
+    <td>74.5%</td>
+    <td>77.0%</td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall16_pretrain/dino_deitsmall16_pretrain.pth">backbone only</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall16_pretrain/dino_deitsmall16_pretrain_full_checkpoint.pth">full ckpt</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall16_pretrain/dino_deits16.onnx">onnx</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall16_pretrain/args.txt">args</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall16_pretrain/dino_deitsmall16_pretrain_log.txt">logs</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall16_pretrain/dino_deitsmall16_pretrain_eval_linear_log.txt">eval logs</a></td>
   </tr>
   <tr>
-    <td>DINO trained ResNet50 ImageNet</td>
-    <td>48.43%</td>
-    <td><a href="https://drive.google.com/file/d/1z5ohKU3RZ_8zcsP0oTcGBwr0eCBDOisS/view?usp=sharing">model</a></td>
-    <td><a href="https://drive.google.com/file/d/1OWhmTz37t6Ru7RXM1PIcxbYlqcootQz1/view?usp=sharing">config</a></td>
-    <td><a href="https://drive.google.com/drive/folders/1pv2NsJIB4AbS_RcBRq9BbGsNu4IkILRz?usp=sharing">results</a></td>
+    <td>ViT-S/8</td>
+    <td>21M</td>
+    <td>78.3%</td>
+    <td>79.7%</td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall8_pretrain/dino_deitsmall8_pretrain.pth">backbone only</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall8_pretrain/dino_deitsmall8_pretrain_full_checkpoint.pth">full ckpt</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall8_pretrain/dino_deits8.onnx">onnx</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall8_pretrain/args.txt">args</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall8_pretrain/dino_deitsmall8_pretrain_log.txt">logs</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall8_pretrain/dino_deitsmall8_pretrain_eval_linear_log.txt">eval logs</a></td>
+  </tr>
+  <tr>
+    <td>ViT-B/16</td>
+    <td>85M</td>
+    <td>76.1%</td>
+    <td>78.2%</td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase16_pretrain/dino_vitbase16_pretrain.pth">backbone only</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase16_pretrain/dino_vitbase16_pretrain_full_checkpoint.pth">full ckpt</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase16_pretrain/dino_vitb16.onnx">onnx</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase16_pretrain/args.txt">args</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase16_pretrain/dino_vitbase16_pretrain_log.txt">logs</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase16_pretrain/dino_vitbase16_pretrain_eval_linear_log.txt">eval logs</a></td>
+  </tr>
+  <tr>
+    <td>ViT-B/8</td>
+    <td>85M</td>
+    <td>77.4%</td>
+    <td>80.1%</td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase8_pretrain/dino_vitbase8_pretrain.pth">backbone only</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase8_pretrain/dino_vitbase8_pretrain_full_checkpoint.pth">full ckpt</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase8_pretrain/dino_vitb8.onnx">onnx</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase8_pretrain/args.txt">args</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase8_pretrain/dino_vitbase8_pretrain_log.txt">logs</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase8_pretrain/dino_vitbase8_pretrain_eval_linear_log.txt">eval logs</a></td>
+  </tr>
+  <tr>
+    <td>ResNet-50</td>
+    <td>23M</td>
+    <td>67.5%</td>
+    <td>75.3%</td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_resnet50_pretrain/dino_resnet50_pretrain.pth">backbone only</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_resnet50_pretrain/dino_resnet50_pretrain_full_checkpoint.pth">full ckpt</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_resnet50_pretrain/dino_resnet50.onnx">onnx</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_resnet50_pretrain/args.txt">args</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_resnet50_pretrain/dino_resnet50_pretrain_log.txt">logs</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_resnet50_pretrain/dino_resnet50_pretrain_eval_linear_log.txt">eval logs</a></td>
   </tr>
 </table>
 
