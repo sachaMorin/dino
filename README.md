@@ -1,14 +1,23 @@
 # Self-Supervised Vision Transformers with DINO
 
 PyTorch implementation and pretrained models for DINO. For details, see **Emerging Properties in Self-Supervised Vision Transformers**.  
-[[`blogpost`](https://ai.facebook.com/blog/dino-paws-computer-vision-with-self-supervised-transformers-and-10x-more-efficient-training)] [[`arXiv`](https://arxiv.org/abs/2104.14294)] [[`Yannic Kilcher's video`](https://www.youtube.com/watch?v=h3ij3F3cPIk)]
+[[`blogpost`](https://ai.facebook.com/blog/dino-paws-computer-vision-with-self-supervised-transformers-and-10x-more-efficient-training)] [[`arXiv`](https://arxiv.org/abs/2104.14294)] [[`Yannic Kilcher's video`](https://www.youtube.com/watch?v=h3ij3F3cPIk)].
 
 <div align="center">
   <img width="100%" alt="DINO illustration" src=".github/dino.gif">
 </div>
 
-## Pretrained models
-You can choose to download only the weights of the pretrained backbone used for downstream tasks, or the full checkpoint which contains backbone and projection head weights for both student and teacher networks. We also provide the backbone in `onnx` format, as well as detailed arguments and training/evaluation logs. Note that `DeiT-S` and `ViT-S` names refer exactly to the same architecture.
+# Downstream applications using DINO models
+
+We use the pretrained DINO models (ResNet50 and ViT-S/8) in two downstream applications, Few-shot learning for object detection and instance segmentation using the [duckietown dataset](https://docs.duckietown.org/daffy/AIDO/out/object_detection_dataset.html)
+
+## 2D Object detection 
+
+<div align="center">
+  <img width="100%" alt="DINO illustration" src="./assets/dino5.png">
+</div>
+
+The trained models can be found online.
 
 <table>
   <tr>
@@ -42,43 +51,76 @@ You can choose to download only the weights of the pretrained backbone used for 
     <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall8_pretrain/dino_deitsmall8_pretrain_log.txt">logs</a></td>
     <td><a href="https://dl.fbaipublicfiles.com/dino/dino_deitsmall8_pretrain/dino_deitsmall8_pretrain_eval_linear_log.txt">eval logs</a></td>
   </tr>
+
+</table>
+
+The train-test split used to train the models can be found [here](https://drive.google.com/drive/folders/1Yg-jTkgkjuxtqmL_2B09IJA7FGb2rqD8?usp=sharing). To use the object detection module, please install detectron2 using.
+
+```
+python -m pip install 'git+https://github.com/facebookresearch/detectron2.git
+```
+
+If you want to replicate the results, the next commands are useful.
+
+Training your model:
+
+```
+python3 src/train.py \
+    --dataset_path PATH_TO_DATASET \
+    --fraction_test TRAIN_TEST_SPLIT_PERCENTAGE \
+    --config_file PATH_TO_CONFIG \
+    --model_weights PATH_TO_MODEL \ 
+    --output_dir PATH_TO_STORE_RESULTS 
+```
+
+Note that if you want to train your model, you will have to map the pretrained backbone of DINO and map the name of the layers to Detectron 2 format. However, one model ready to use with detectron is provided [here](https://drive.google.com/drive/folders/127rvJ8MIbdE6n5uJcP7ktUyPyn6JhOyl?usp=sharing).
+
+Single Image Inference with trained model:
+
+```
+python3 src/single_image_inference.py \
+    --config_file PATH_TO_CONFIG \
+    --model_weights PATH_TO_MODEL \ 
+    --image_path IMAGE.PNG
+```
+
+COCO evaluation:
+
+```
+python3 src/inference.py \
+    --dataset_path PATH_TO_DATASET \
+    --config_file PATH_TO_CONFIG \
+    --model_weights PATH_TO_MODEL \ 
+    --output_dir PATH_TO_STORE_RESULTS \
+    --iou_threshold IOU_NON_MAXIMUM_SUPRESSION 
+```
+
+## Pretrained models
+You can choose to download only the weights of the pretrained backbone used for downstream tasks, or the full checkpoint which contains backbone and projection head weights for both student and teacher networks. We also provide the backbone in `onnx` format, as well as detailed arguments and training/evaluation logs. Note that `DeiT-S` and `ViT-S` names refer exactly to the same architecture.
+
+<table>
   <tr>
-    <td>ViT-B/16</td>
-    <td>85M</td>
-    <td>76.1%</td>
-    <td>78.2%</td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase16_pretrain/dino_vitbase16_pretrain.pth">backbone only</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase16_pretrain/dino_vitbase16_pretrain_full_checkpoint.pth">full ckpt</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase16_pretrain/dino_vitb16.onnx">onnx</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase16_pretrain/args.txt">args</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase16_pretrain/dino_vitbase16_pretrain_log.txt">logs</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase16_pretrain/dino_vitbase16_pretrain_eval_linear_log.txt">eval logs</a></td>
+    <th>arch</th>
+    <th>AP</th>
+    <th colspan="2">download</th>
   </tr>
   <tr>
-    <td>ViT-B/8</td>
-    <td>85M</td>
-    <td>77.4%</td>
-    <td>80.1%</td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase8_pretrain/dino_vitbase8_pretrain.pth">backbone only</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase8_pretrain/dino_vitbase8_pretrain_full_checkpoint.pth">full ckpt</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase8_pretrain/dino_vitb8.onnx">onnx</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase8_pretrain/args.txt">args</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase8_pretrain/dino_vitbase8_pretrain_log.txt">logs</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_vitbase8_pretrain/dino_vitbase8_pretrain_eval_linear_log.txt">eval logs</a></td>
+    <td>Supervised ResNet50 ImageNet</td>
+    <td>62.5%</td>
+    <td><a href="https://drive.google.com/file/d/1TmEJncJRkJJds6r5HRo4aCKsIZ3XZ-V1/view?usp=sharing">model</a></td>
+    <td><a href="https://drive.google.com/file/d/1K6C-WM5T84OSfEguigy6OPfxSbHLiq2I/view?usp=sharing">config</a></td>
+    <td><a href="https://drive.google.com/drive/folders/13wGf16bqCQMmY0YG7nqv947kZvaxXs1k?usp=sharing">results</a></td>
   </tr>
   <tr>
-    <td>ResNet-50</td>
-    <td>23M</td>
-    <td>67.5%</td>
-    <td>75.3%</td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_resnet50_pretrain/dino_resnet50_pretrain.pth">backbone only</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_resnet50_pretrain/dino_resnet50_pretrain_full_checkpoint.pth">full ckpt</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_resnet50_pretrain/dino_resnet50.onnx">onnx</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_resnet50_pretrain/args.txt">args</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_resnet50_pretrain/dino_resnet50_pretrain_log.txt">logs</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/dino/dino_resnet50_pretrain/dino_resnet50_pretrain_eval_linear_log.txt">eval logs</a></td>
+    <td>DINO trained ResNet50 ImageNet</td>
+    <td>48.43%</td>
+    <td><a href="https://drive.google.com/file/d/1z5ohKU3RZ_8zcsP0oTcGBwr0eCBDOisS/view?usp=sharing">model</a></td>
+    <td><a href="https://drive.google.com/file/d/1OWhmTz37t6Ru7RXM1PIcxbYlqcootQz1/view?usp=sharing">config</a></td>
+    <td><a href="https://drive.google.com/drive/folders/1pv2NsJIB4AbS_RcBRq9BbGsNu4IkILRz?usp=sharing">results</a></td>
   </tr>
 </table>
+
+If you want to 
 
 We also release XCiT models ([[`arXiv`](https://arxiv.org/abs/2106.09681)] [[`code`](https://github.com/facebookresearch/xcit)]) trained with DINO:
 <table>
