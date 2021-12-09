@@ -55,9 +55,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--image_path", default='data/dt/frames/frame_000061.png',
                         type=str, help="Path of the image to load.")
-    parser.add_argument("--config_file", default='models/detectron/checkpoints/baseline/cfg.yaml',
+    parser.add_argument("--config_file", default='models/checkpoints/baseline/cfg.yaml',
                         type=str, help="Path to configuration file")
-    parser.add_argument("--model_weights", default='models/detectron/checkpoints/baseline/model_final.pth',
+    parser.add_argument("--model_weights", default='models/checkpoints/baseline/model_final.pth',
                         type=str, help="Path to model weights.")
     args = parser.parse_args()
     plot_image(args)
