@@ -66,7 +66,7 @@ if __name__ == '__main__':
                         type=str, help="Path to configuration file")
     parser.add_argument("--model_weights", default='models/detectron/model_final_280758.pkl',
                         type=str, help="Path to model weights.")
-    parser.add_argument("--output_dir", default='models/detectron/checkpoints/baseline',
+    parser.add_argument("--output_dir", default='models/checkpoints/baseline',
                         type=str, help="Path to store results.")
     args = parser.parse_args()
     main(args)

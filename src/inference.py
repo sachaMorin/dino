@@ -48,11 +48,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset_path", default='data/dt',
                         type=str, help="Path of the dataset.")
-    parser.add_argument("--config_file", default='models/detectron/checkpoints/baseline/cfg.yaml',
+    parser.add_argument("--config_file", default='models/checkpoints/baseline/cfg.yaml',
                         type=str, help="Path to configuration file")
-    parser.add_argument("--model_weights", default='models/detectron/checkpoints/baseline/model_final.pth',
+    parser.add_argument("--model_weights", default='models/checkpoints/baseline/model_final.pth',
                         type=str, help="Path to model weights.")
-    parser.add_argument("--output_dir", default='models/detectron/checkpoints/baseline',
+    parser.add_argument("--output_dir", default='models/checkpoints/baseline',
                         type=str, help="Path to store results.")
     parser.add_argument("--iou_threshold", default=0.9,
                         type=float, help="IoU threshold for non-maximum suppression")
