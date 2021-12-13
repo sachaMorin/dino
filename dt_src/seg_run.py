@@ -74,7 +74,7 @@ def rgb_to_c(img):
             mask = mask.all(axis=-1)
         elif m[0] == 'y_lane':
             # Yellow lanes are trickier so we use HSV filter
-            lower_hsv = np.array([27.5, 0, 0])
+            lower_hsv = np.array([27.5, 0, 70])
             higher_hsv = np.array([32.5, 255, 255])
             mask = cv2.inRange(hsv, lower_hsv, higher_hsv) == 255
             raw[mask] = m[1]
@@ -83,13 +83,15 @@ def rgb_to_c(img):
             lower_hsv = np.array([0, 200, 200])
             higher_hsv = np.array([5, 255, 255])
             mask = cv2.inRange(hsv, lower_hsv, higher_hsv) == 255
-            raw[mask] = m[1]
+        elif m[0] == 'sign':
+            # 3 types of pixel for signs
+            mask = (img == m[2]) + (img == [52, 53, 8]) + (img == [76, 71, 71])
+            mask = mask.all(axis=-1)
         elif m[0] == 'w_lane':
-            # Include some grey pizels in white lanes
+            # Include some grey pixels in white lanes
             lower_hsv = np.array([0, 0, 125])
             higher_hsv = np.array([0, 0, 255])
             mask = cv2.inRange(hsv, lower_hsv, higher_hsv) == 255
-            raw[mask] = m[1]
         else:
             mask = (img == m[2]).all(axis=-1)
         raw[mask] = m[1]
