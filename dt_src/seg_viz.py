@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 
-from seg_run import CLASS_MAP, c_to_rgb, load_mlp
+from seg_run import CLASS_MAP, c_to_rgb, load_mlp, rgb_to_c
 from dt_utils import get_dino,transform_img, dt_frames
 
 col = [m[0] for m in CLASS_MAP]
@@ -30,6 +30,14 @@ for i, img, mask in data:
     nn.functional.normalize(z_i, dim=1, p=2, out=z_i)
     pred = clf.predict(z_i).reshape((60, 60))
     seg = c_to_rgb(pred)
+    
+    # View mask
+    # mask = cv2.resize(np.array(mask), (480, 480))
+    # plt.imshow(mask)
+    # plt.show()
+    # mask = c_to_rgb(rgb_to_c(mask))
+    # plt.imshow(mask)
+    # plt.show()
 
     # Plot
     a = 1
