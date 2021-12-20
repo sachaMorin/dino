@@ -15,11 +15,11 @@ from dt_utils import transform_img, dt_frames, RESULTS_PATH
 SAVE = True
 
 # Viz some results
-data = dt_frames(path=os.path.join('..', 'data', 'dt_sim', 'train', 'images'),
-                 label_path=os.path.join('..', 'data', 'dt_sim', 'train', 'labels'))
+data = dt_frames(path=os.path.join('..', 'data', 'dt_sim', 'test', 'images'),
+                 label_path=os.path.join('..', 'data', 'dt_sim', 'test', 'labels'))
 
 # m = load_DINOSeg('cuda:0')
-m = DINOSeg.load_from_checkpoint(os.path.join(RESULTS_PATH, 'linear.pt'))
+m = DINOSeg.load_from_checkpoint(os.path.join(RESULTS_PATH, 'linear_frozen.pt'))
 m.to('cuda')
 
 # Display colors

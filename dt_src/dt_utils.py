@@ -1,10 +1,18 @@
 "Utils."
 import os
+import sys
+import inspect
 
 import cv2
 import numpy as np
 
 import torch
+
+# Add parent dir to scope
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+parentdir = os.path.dirname(currentdir)
+sys.path.insert(0, parentdir) 
+
 import vision_transformer as vits
 from torchvision import transforms as pth_transforms
 from PIL import Image
