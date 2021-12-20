@@ -21,8 +21,9 @@ from torchvision import transforms as pth_transforms
 import pytorch_lightning as pl
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 
-from dt_src.dt_utils import DATA_PATH, RESULTS_PATH, CLASS_MAP, prepare_seg_dataset, get_dino
+from dt_utils import RESULTS_PATH, CLASS_MAP, prepare_seg_dataset, get_dino
 from eval_knn import knn_classifier
 
 
@@ -33,7 +34,7 @@ class DuckieSegDataset(Dataset):
         self.path = os.path.join('..', 'data', 'torch', split)
         files = [f for f in os.listdir(self.path) if f.endswith('x.png')]
         self.len = len(files)
-        t = [pth_transforms.Grayscale()] if grayscale else []
+        t = [pth_transforms.Grayscale(num_output_channels=3)] if grayscale else []
         t += [
             pth_transforms.Resize((480, 480)),
             pth_transforms.ToTensor(),
@@ -89,7 +90,8 @@ class Linear(torch.nn.Module):
 class DINOSeg(pl.LightningModule):
     """DINO + Segmentation Head"""
 
-    def __init__(self, n_blocks, head='linear', batch_size=1, lr=1e-6, optimizer=AdamW, freeze_backbone=True, max_epochs=200, grayscale=False):
+    def __init__(self, n_blocks, head='linear', batch_size=1, lr=1e-6, optimizer=AdamW, freeze_backbone=True,
+                 max_epochs=200, grayscale=False):
         super().__init__()
         self.n_blocks = n_blocks
         self.head = head
@@ -146,11 +148,16 @@ class DINOSeg(pl.LightningModule):
 
     def predict_dl(self, data_loader):
         """Same as predict, but on a torch data loader."""
+        # Put model on GPU
         device = self.device
-        self.to('cuda')
+        self.to('cuda:0' if torch.cuda.is_available() else 'cpu')
+
+        # Predict data loader
         self.eval()
         with torch.no_grad():
             result = torch.cat([self.predict(b.to(self.device)).cpu() for b, _ in data_loader]).numpy()
+
+        # Return model to original device
         self.to(device)
 
         return result
@@ -168,33 +175,50 @@ class DINOSeg(pl.LightningModule):
         gt = torch.cat(gt).cpu().numpy().flatten()
 
         acc = balanced_accuracy_score(gt, pred)
-        print(f'\nValidation accuracy : {acc:.5f}\n')
-        self.log('val_acc', acc)
+        self.log('val_acc', acc, prog_bar=True)
 
     def train_dataloader(self):
-        return DataLoader(DuckieSegDataset(split='train', grayscale=self.grayscale), batch_size=self.batch_size, shuffle=True, num_workers=12)
+        return DataLoader(DuckieSegDataset(split='train', grayscale=self.grayscale), batch_size=self.batch_size,
+                          shuffle=True, num_workers=12)
 
     def val_dataloader(self):
-        return DataLoader(DuckieSegDataset(split='val', grayscale=self.grayscale), batch_size=self.batch_size, shuffle=False, num_workers=12)
+        return DataLoader(DuckieSegDataset(split='val', grayscale=self.grayscale), batch_size=self.batch_size,
+                          shuffle=False, num_workers=12)
 
     def test_dataloader(self):
-        return DataLoader(DuckieSegDataset(split='test', grayscale=self.grayscale), batch_size=self.batch_size, shuffle=False, num_workers=12)
+        return DataLoader(DuckieSegDataset(split='test', grayscale=self.grayscale), batch_size=self.batch_size,
+                          shuffle=False, num_workers=12)
 
-    def fit(self, file_name=None):
+    def fit(self, ck_file_name=None):
         if self.freeze_backbone:
             self.freeze_bb()
         else:
             self.unfreeze_bb()
 
+        if ck_file_name is None:
+            ck_file_name = str(self.n_blocks) + '_' + self.head \
+                           + ('_frozen' if self.freeze_backbone else '_finetuned') \
+                           + ('_grayscale' if self.grayscale else '')
+
+        # PL callbacks
+        callbacks = [
+            ModelCheckpoint(
+                monitor='val_acc',
+                mode='max',
+                dirpath=RESULTS_PATH,
+                filename=ck_file_name,
+                auto_insert_metric_name=False),
+            EarlyStopping(
+                monitor="val_acc",
+                mode='max',
+                patience=10)
+        ]
+
         trainer = Trainer(gpus=1,
                           max_epochs=self.max_epochs,
-                          val_check_interval=.5,
-                          callbacks=[EarlyStopping(monitor="val_acc", mode='max', patience=20)])
+                          check_val_every_n_epoch=1,
+                          callbacks=callbacks)
         trainer.fit(self)
-
-        if file_name is None:
-            file_name = self.head + ('_frozen' if self.freeze_backbone else '') + '.pt'
-        trainer.save_checkpoint(os.path.join(RESULTS_PATH, file_name))
 
     def freeze_bb(self):
         for p in self.dino.parameters():
@@ -207,25 +231,34 @@ class DINOSeg(pl.LightningModule):
 
 if __name__ == '__main__':
     BLOCKS = 1  # Number of transformer blocks to use in the backbone
-    GRAYSCALE = False
+    GRAYSCALE = True
+    MAX_EPOCHS = 3
 
     # Make sure to run this once before training classifiers
-    prepare_seg_dataset()
+    DATA_PATH = os.path.join('..', 'data')
+    if not os.path.exists(os.path.join(DATA_PATH, 'torch')):
+        os.mkdir(os.path.join(DATA_PATH, 'torch'))
+        os.mkdir(os.path.join(DATA_PATH, 'torch', 'train'))
+        os.mkdir(os.path.join(DATA_PATH, 'torch', 'test'))
+        os.mkdir(os.path.join(DATA_PATH, 'torch', 'val'))
+        prepare_seg_dataset()
 
     # Linear Head
     lin_frozen = DINOSeg(head='linear', freeze_backbone=True, optimizer=Adam, lr=1e-3, batch_size=6,
-                         n_blocks=BLOCKS, max_epochs=1, grayscale=GRAYSCALE)
+                         n_blocks=BLOCKS, max_epochs=MAX_EPOCHS, grayscale=GRAYSCALE)
     lin_frozen.fit()
     pred_lin_frozen = lin_frozen.predict_dl(lin_frozen.test_dataloader())
 
-    # # MLP Head
+    # MLP Head
     mlp_frozen = DINOSeg(head='mlp', freeze_backbone=True, optimizer=Adam, lr=1e-3, batch_size=6,
-                         n_blocks=BLOCKS, max_epochs=1, grayscale=GRAYSCALE)
+                         n_blocks=BLOCKS, max_epochs=MAX_EPOCHS, grayscale=GRAYSCALE)
     mlp_frozen.fit()
     pred_mlp_frozen = mlp_frozen.predict_dl(mlp_frozen.test_dataloader())
 
     # MLP Head + Fine tune backbone
-    mlp_dino = DINOSeg.load_from_checkpoint(os.path.join(RESULTS_PATH, 'linear_frozen.pt'))
+    # Start from frozen linear checkpoint
+    ck_file_name = str(BLOCKS) + '_' + 'linear_frozen' + ('_grayscale' if GRAYSCALE else '') + '.ckpt'
+    mlp_dino = DINOSeg.load_from_checkpoint(os.path.join(RESULTS_PATH, ck_file_name))
     mlp_dino.freeze_backbone = False
     mlp_dino.optimizer = AdamW
     mlp_dino.batch_size = 1
@@ -235,7 +268,6 @@ if __name__ == '__main__':
 
     # Get ground truth
     gt = torch.cat([y_i.flatten() for _, y_i in mlp_dino.test_dataloader()]).cpu().numpy()
-
 
     # Save results
     results = pd.DataFrame.from_dict(dict(ground_truth=gt,
