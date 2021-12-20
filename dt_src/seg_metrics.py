@@ -1,14 +1,14 @@
-"""Process output of seg_run.py to show performance metrics."""
+"""Process output of seg_fit.py to show performance metrics."""
 import os
 import pandas as pd
-from seg_run import CLASS_MAP
+from dt_src.dt_utils import CLASS_MAP
 from sklearn.metrics import jaccard_score, balanced_accuracy_score, confusion_matrix
 import numpy as np
 pd.options.display.float_format = '{:,.3f}'.format
 
-results = pd.read_pickle(os.path.join('..', 'results', 'val_pred.pkl'))
+results = pd.read_pickle(os.path.join('..', 'results', 'test_pred.pkl'))
 
-iou = dict( reg=list(), knn=list(), nn=list())
+iou = dict( reg=list(), dino=list(), nn=list())
 
 gt = results['ground_truth']
 

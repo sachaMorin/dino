@@ -234,11 +234,11 @@ class VisionTransformer(nn.Module):
 
         return self.pos_drop(x)
 
-    def forward(self, x, all=False):
+    def forward(self, x, all=True, intermediate=False):
         x = self.prepare_tokens(x)
         for i, blk in enumerate(self.blocks):
             x = blk(x)
-            if i == 3:
+            if intermediate and i == intermediate-1:
                 return self.norm(x)
         x = self.norm(x)
 
