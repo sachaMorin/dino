@@ -3,7 +3,7 @@ import os
 
 import torch.cuda
 
-from seg_run import load_mlp
+from seg_fit import load_mlp
 from dt_utils import get_dino,transform_img, dt_frames
 import time
 
