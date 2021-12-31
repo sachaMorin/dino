@@ -31,16 +31,16 @@ class_map = [
     ("floor", 0, "000000", "000000"),
     ("bg", 1, "ff00ff", "000000"),
     ("y_lane", 2, "ffff00", "ffff00"),
-    ("w_lane", 3, "ffffff", "000099"),
+    ("w_lane", 3, "ffffff", "df4f4f"),
     ("red_tape", 4, "fe0000", "fe0000"),
     ("duckiebot", 5, "ad0000", "ad0000"),
-    ("sign", 6, "4a4342", "ffc0cb"),
+    ("sign", 6, "4a4342", "ffc30b"),
     ("duckie", 7, "cfa923", "00ff00"),
     ("duckie_pass", 8, "846c16", "00ffff"),  # Passenger duckies are different objects!
     ("cone", 9, "ffa600", "ffa600"),
     ("house", 10, "279621", "279621"),
     ("bus", 11, "ebd334", "ff00ff"),
-    ("truck", 12, "961fad", "df4f4f"),
+    ("truck", 12, "961fad", "000099"),
     ("barrier", 13, "000099", "964b00"),
 ]
 
