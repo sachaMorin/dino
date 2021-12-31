@@ -91,6 +91,7 @@ python3 src/inference.py \
     --iou_threshold IOU_NON_MAXIMUM_SUPRESSION 
 ```
 
+# Original DINO README
 # Self-Supervised Vision Transformers with DINO
 
 PyTorch implementation and pretrained models for DINO. For details, see **Emerging Properties in Self-Supervised Vision Transformers**.  
