@@ -6,9 +6,9 @@ from sklearn.metrics import jaccard_score, balanced_accuracy_score, confusion_ma
 import numpy as np
 pd.options.display.float_format = '{:,.3f}'.format
 
-results = pd.read_pickle(os.path.join('..', 'results', 'test_pred.pkl'))
+results = pd.read_pickle(os.path.join('..', 'results', 'test_pred_4_grayscale.pkl'))
 
-iou = dict( reg=list(), dino=list(), nn=list())
+iou = dict( reg=list(), nn=list(), dino=list())
 
 gt = results['ground_truth']
 

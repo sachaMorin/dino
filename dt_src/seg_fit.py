@@ -230,48 +230,58 @@ class DINOSeg(pl.LightningModule):
 
 
 if __name__ == '__main__':
-    BLOCKS = 1  # Number of transformer blocks to use in the backbone
-    GRAYSCALE = True
-    MAX_EPOCHS = 3
-
-    # Make sure to run this once before training classifiers
+    # Main Segmentation experiment for our report
+    MAX_EPOCHS = 200
     DATA_PATH = os.path.join('..', 'data')
     if not os.path.exists(os.path.join(DATA_PATH, 'torch')):
+        # Make sure to run this once before training classifiers
         os.mkdir(os.path.join(DATA_PATH, 'torch'))
         os.mkdir(os.path.join(DATA_PATH, 'torch', 'train'))
         os.mkdir(os.path.join(DATA_PATH, 'torch', 'test'))
         os.mkdir(os.path.join(DATA_PATH, 'torch', 'val'))
         prepare_seg_dataset()
 
-    # Linear Head
-    lin_frozen = DINOSeg(head='linear', freeze_backbone=True, optimizer=Adam, lr=1e-3, batch_size=6,
-                         n_blocks=BLOCKS, max_epochs=MAX_EPOCHS, grayscale=GRAYSCALE)
-    lin_frozen.fit()
-    pred_lin_frozen = lin_frozen.predict_dl(lin_frozen.test_dataloader())
+    # Number of transformer blocks to use in the backbone
+    for blocks in [1, 4, 12]:
+        # Test and train on grayscale
+        for grayscale in [False, True]:
 
-    # MLP Head
-    mlp_frozen = DINOSeg(head='mlp', freeze_backbone=True, optimizer=Adam, lr=1e-3, batch_size=6,
-                         n_blocks=BLOCKS, max_epochs=MAX_EPOCHS, grayscale=GRAYSCALE)
-    mlp_frozen.fit()
-    pred_mlp_frozen = mlp_frozen.predict_dl(mlp_frozen.test_dataloader())
+            # Linear Head
+            lin_frozen = DINOSeg(head='linear', freeze_backbone=True, optimizer=Adam, lr=1e-3, batch_size=6,
+                                 n_blocks=blocks, max_epochs=MAX_EPOCHS, grayscale=grayscale)
+            lin_frozen.fit()
+            pred_lin_frozen = lin_frozen.predict_dl(lin_frozen.test_dataloader())
 
-    # MLP Head + Fine tune backbone
-    # Start from frozen linear checkpoint
-    ck_file_name = str(BLOCKS) + '_' + 'linear_frozen' + ('_grayscale' if GRAYSCALE else '') + '.ckpt'
-    mlp_dino = DINOSeg.load_from_checkpoint(os.path.join(RESULTS_PATH, ck_file_name))
-    mlp_dino.freeze_backbone = False
-    mlp_dino.optimizer = AdamW
-    mlp_dino.batch_size = 1
-    mlp_dino.lr = 1e-6
-    mlp_dino.fit()
-    pred_mlp_dino = mlp_dino.predict_dl(mlp_dino.test_dataloader())
+            # Get ground truth
+            gt = torch.cat([y_i.flatten() for _, y_i in lin_frozen.test_dataloader()]).cpu().numpy()
 
-    # Get ground truth
-    gt = torch.cat([y_i.flatten() for _, y_i in mlp_dino.test_dataloader()]).cpu().numpy()
+            # MLP Head
+            mlp_frozen = DINOSeg(head='mlp', freeze_backbone=True, optimizer=Adam, lr=1e-3, batch_size=6,
+                                 n_blocks=blocks, max_epochs=MAX_EPOCHS, grayscale=grayscale)
+            mlp_frozen.fit()
+            pred_mlp_frozen = mlp_frozen.predict_dl(mlp_frozen.test_dataloader())
 
-    # Save results
-    results = pd.DataFrame.from_dict(dict(ground_truth=gt,
-                                          pred_dino=pred_mlp_dino,
-                                          pred_nn=pred_mlp_frozen,
-                                          pred_reg=pred_lin_frozen))
-    results.to_pickle(os.path.join(RESULTS_PATH, 'test_pred.pkl'))
+            if blocks < 5:
+                # MLP Head + Fine tune backbone
+                # Only finetune with fewer than 5 blocks, migh otherwise run out of GPU RAM
+                # Start from frozen linear checkpoint
+                ck_file_name = str(blocks) + '_' + 'mlp_frozen' + ('_grayscale' if grayscale else '') + '.ckpt'
+                mlp_dino = DINOSeg.load_from_checkpoint(os.path.join(RESULTS_PATH, ck_file_name))
+                mlp_dino.freeze_backbone = False
+                mlp_dino.optimizer = AdamW
+                mlp_dino.batch_size = 1
+                mlp_dino.lr = 1e-6
+                mlp_dino.fit()
+                pred_mlp_dino = mlp_dino.predict_dl(mlp_dino.test_dataloader())
+            else:
+                # Dummy predictions for compatibility with the rest of the pipeline
+                mask = torch.randperm(pred_mlp_frozen.shape[0])
+                pred_mlp_dino = pred_mlp_frozen[mask]
+
+            # Save results
+            results = pd.DataFrame.from_dict(dict(ground_truth=gt,
+                                                  pred_dino=pred_mlp_dino,
+                                                  pred_nn=pred_mlp_frozen,
+                                                  pred_reg=pred_lin_frozen))
+            file_name = 'test_pred_' + str(blocks) + ('_grayscale' if grayscale else '') + '.pkl'
+            results.to_pickle(os.path.join(RESULTS_PATH, file_name))
