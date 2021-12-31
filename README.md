@@ -12,14 +12,14 @@ collected from the Duckietown simulator environment. We further fine-tune the ba
 Experiments are repeated using 1, 4 and 12 transformer blocks pretrained with DINO. The best results are achieved
 by training an MLP head and then fine-tuning the backbone on 4 transformer blocks. This model reaches an average class 
 IoU of .927 and an average class accuracy of .959. Results can be reproduced by running `dt_src/seg_fit.py`. The dataset
-and trained models are available [here](https://drive.google.com/file/d/1YuaBqaK3jO3sWhroYbszU7TVkntDwlRW/view?usp=sharing) and [here](https://drive.google.com/file/d/1xg6ay-R0_h3v_ol2kBkNL7nJRtUbxLSw/view?usp=sharing).
+and trained Pytorch Lightning checkpoints are available [here](https://drive.google.com/file/d/1YuaBqaK3jO3sWhroYbszU7TVkntDwlRW/view?usp=sharing) and [here](https://drive.google.com/file/d/1xg6ay-R0_h3v_ol2kBkNL7nJRtUbxLSw/view?usp=sharing).
 
 The following gif is generated at 720p (90x90 patches) for sharper perdictions.
 <div align="center">
   <img width="50%" alt="DINO illustration" src=".github/segmentation.gif">
 </div>
 
-## 2D Object detection 
+## 2D Object Detection 
 
 <div align="center">
   <img width="100%" alt="DINO illustration" src="./assets/dino5.png">
