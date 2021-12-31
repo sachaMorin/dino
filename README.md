@@ -1,15 +1,23 @@
-# Self-Supervised Vision Transformers with DINO
-
-PyTorch implementation and pretrained models for DINO. For details, see **Emerging Properties in Self-Supervised Vision Transformers**.  
-[[`blogpost`](https://ai.facebook.com/blog/dino-paws-computer-vision-with-self-supervised-transformers-and-10x-more-efficient-training)] [[`arXiv`](https://arxiv.org/abs/2104.14294)] [[`Yannic Kilcher's video`](https://www.youtube.com/watch?v=h3ij3F3cPIk)].
-
-<div align="center">
-  <img width="100%" alt="DINO illustration" src=".github/dino.gif">
-</div>
 
 # Downstream applications using DINO models
 
-We use the pretrained DINO models (ResNet50 and ViT-S/8) in two downstream applications, Few-shot learning for object detection and instance segmentation using the [duckietown dataset](https://docs.duckietown.org/daffy/AIDO/out/object_detection_dataset.html)
+We use the pretrained DINO models (ResNet50 and ViT-S/8) in two downstream applications, image segmentation and 
+few-shot learning for object detection in the [Duckietown dataset](https://docs.duckietown.org/daffy/AIDO/out/object_detection_dataset.html).
+
+## Image Segmentation
+We use the patch encodings from the ViT-S/8 DINO backbone to perform a coarse image segmentation tasks. We run the model
+at 480p, yielding 60x60 patches, and train classifier heads to predict one of the 14 object classes **for each 8x8 patch** in images
+collected from the Duckietown simulator environment. We further fine-tune the backbone for increased performance. 
+
+Experiments are repeated using 1, 4 and 12 transformer blocks pretrained with DINO. The best results are achieved
+by training an MLP head and then fine-tuning the backbone on 4 transformer blocks. This model reaches an average class 
+IoU of .927 and an average class accuracy of .959. Results can be reproduced by running `dt_src/seg_fit.py`. The dataset
+and trained models are available [here](https://drive.google.com/file/d/1YuaBqaK3jO3sWhroYbszU7TVkntDwlRW/view?usp=sharing) and [here](https://drive.google.com/file/d/1xg6ay-R0_h3v_ol2kBkNL7nJRtUbxLSw/view?usp=sharing).
+
+The following gif is generated at 720p (90x90 patches) for sharper perdictions.
+<div align="center">
+  <img width="50%" alt="DINO illustration" src=".github/segmentation.gif">
+</div>
 
 ## 2D Object detection 
 
@@ -82,6 +90,15 @@ python3 src/inference.py \
     --output_dir PATH_TO_STORE_RESULTS \
     --iou_threshold IOU_NON_MAXIMUM_SUPRESSION 
 ```
+
+# Self-Supervised Vision Transformers with DINO
+
+PyTorch implementation and pretrained models for DINO. For details, see **Emerging Properties in Self-Supervised Vision Transformers**.  
+[[`blogpost`](https://ai.facebook.com/blog/dino-paws-computer-vision-with-self-supervised-transformers-and-10x-more-efficient-training)] [[`arXiv`](https://arxiv.org/abs/2104.14294)] [[`Yannic Kilcher's video`](https://www.youtube.com/watch?v=h3ij3F3cPIk)].
+
+<div align="center">
+  <img width="100%" alt="DINO illustration" src=".github/dino.gif">
+</div>
 
 ## Pretrained models
 You can choose to download only the weights of the pretrained backbone used for downstream tasks, or the full checkpoint which contains backbone and projection head weights for both student and teacher networks. We also provide the backbone in `onnx` format, as well as detailed arguments and training/evaluation logs. Note that `DeiT-S` and `ViT-S` names refer exactly to the same architecture.
