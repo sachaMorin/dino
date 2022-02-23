@@ -1,12 +1,14 @@
-"""Process output of seg_fit.py to show performance metrics."""
+"""Process output of pl_torch_modules.py to show performance metrics.
+
+Deprecated do not use."""
 import os
 import pandas as pd
-from dt_src.dt_utils import CLASS_MAP
+from dt.dt_segmentation.dt_utils import CLASS_MAP
 from sklearn.metrics import jaccard_score, balanced_accuracy_score, confusion_matrix
 import numpy as np
 pd.options.display.float_format = '{:,.3f}'.format
 
-results = pd.read_pickle(os.path.join('..', 'results', 'test_pred_4_grayscale.pkl'))
+results = pd.read_pickle(os.path.join('../..', 'results', 'test_pred_4_grayscale.pkl'))
 
 iou = dict( reg=list(), nn=list(), dino=list())
 
