@@ -1,4 +1,6 @@
-"""Visualize MLP results from seg_fit.py"""
+"""Visualize MLP results from pl_torch_modules.py
+
+Deprecated do not use."""
 import os
 
 from skimage import color
@@ -6,18 +8,18 @@ import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 
-from seg_fit import DINOSeg
-from dt_src.dt_utils import CLASS_MAP
-from dt_utils import transform_img, dt_frames, RESULTS_PATH
+from pl_torch_modules import DINOSeg
+from dt.dt_segmentation.dt_utils import CLASS_MAP
+from dt_utils import transform_img, dt_frames
 
 SAVE = False  # Set this to True to save predictions for the whole dataset
 
 # Viz some results
-data = dt_frames(path=os.path.join('..', 'data', 'dt_sim', 'test', 'images'),
-                 label_path=os.path.join('..', 'data', 'dt_sim', 'test', 'labels'),
+data = dt_frames(path=os.path.join('../..', 'data', 'dt_sim', 'test', 'images'),
+                 label_path=os.path.join('../..', 'data', 'dt_sim', 'test', 'labels'),
                  max=10)
 
-m = DINOSeg.load_from_checkpoint(os.path.join('..', 'models', 'sim_only', '4_mlp_finetuned.ckpt'))
+m = DINOSeg.load_from_checkpoint(os.path.join('../..', 'models', 'sim_only', '4_mlp_finetuned.ckpt'))
 m.to('cuda')
 
 # Display colors
@@ -45,7 +47,7 @@ for i, img, mask in data:
         a.set_yticks([])
     plt.tight_layout()
     if SAVE:
-        plt.savefig(os.path.join('..', 'results', 'video', f'image_{str(i).zfill(5)}.png'))
+        plt.savefig(os.path.join('../..', 'results', 'video', f'image_{str(i).zfill(5)}.png'))
         plt.close()
     else:
         plt.show()
