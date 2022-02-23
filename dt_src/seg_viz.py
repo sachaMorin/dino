@@ -17,7 +17,7 @@ data = dt_frames(path=os.path.join('..', 'data', 'dt_sim', 'test', 'images'),
                  label_path=os.path.join('..', 'data', 'dt_sim', 'test', 'labels'),
                  max=10)
 
-m = DINOSeg.load_from_checkpoint(os.path.join(RESULTS_PATH, '4_mlp_finetuned.ckpt'))
+m = DINOSeg.load_from_checkpoint(os.path.join('..', 'models', 'sim_only', '4_mlp_finetuned.ckpt'))
 m.to('cuda')
 
 # Display colors

@@ -28,15 +28,17 @@ RESULTS_PATH = os.path.join('..', 'results')
 # Third element is the RGB color from simulator rendering. (Not perfect accurate for some class, see rgb_to_c_
 # Fourth element is the displayed color for that class sin seg_viz.py
 class_map = [
-    ("floor", 0, "000000", "000000"),
-    ("bg", 1, "ff00ff", "000000"),
-    ("y_lane", 2, "ffff00", "ffff00"),
-    ("w_lane", 3, "ffffff", "df4f4f"),
+    ("bg", 0, "000000", "000000"),
+    ("y_lane", 1, "ffff00", "ffff00"),
+    ("w_lane", 2, "ffffff", "df4f4f"),
+    ("duckiebot", 3, "ad0000", "ad0000"),
+    ("sign", 4, "4a4342", "00ff00"),
+    ("duckie", 5, "cfa923", "00ffff"),
+]
+
+# Some classes in the sim dataset we want to map to bg
+sim_to_bg = [
     ("red_tape", 4, "fe0000", "fe0000"),
-    ("duckiebot", 5, "ad0000", "ad0000"),
-    ("sign", 6, "4a4342", "ffc30b"),
-    ("duckie", 7, "cfa923", "00ff00"),
-    ("duckie_pass", 8, "846c16", "00ffff"),  # Passenger duckies are different objects!
     ("cone", 9, "ffa600", "ffa600"),
     ("house", 10, "279621", "279621"),
     ("bus", 11, "ebd334", "ff00ff"),
@@ -51,6 +53,7 @@ def to_rgb(hex):
 
 # Convert Hex to RGB
 CLASS_MAP = [(m[0], m[1], to_rgb(m[2]), to_rgb(m[3])) for m in class_map]
+BG_MAP = [(m[0], m[1], to_rgb(m[2]), to_rgb(m[3])) for m in sim_to_bg]
 
 
 def get_dino(patch_size=8, device=DEVICE):
@@ -169,9 +172,9 @@ def rgb_to_c(mask_img, raw_img):
             # Get rest of the plate
             # Won't capture all backplates, but filter needs to be conservative to not capture white lanes/floor
             # Will cover some signs, but since we process signs after, the class in result should be mostly correct.
-            lower_rgb = np.array([88, 88, 88])
-            higher_rgb = np.array([95, 95, 95])
-            mask += cv2.inRange(raw_img, lower_rgb, higher_rgb) == 255
+            # lower_rgb = np.array([88, 88, 88])
+            # higher_rgb = np.array([95, 95, 95])
+            # mask += cv2.inRange(raw_img, lower_rgb, higher_rgb) == 255
         elif m[0] == 'y_lane':
             # Yellow lanes are trickier so we use HSV filter
             lower_hsv = np.array([25, 60, 150])
@@ -192,9 +195,19 @@ def rgb_to_c(mask_img, raw_img):
             lower_hsv = np.array([0, 0, 145])
             higher_hsv = np.array([180, 40, 255])
             mask = cv2.inRange(raw_hsv, lower_hsv, higher_hsv) == 255
+        elif m[0] == 'duckie':
+            # Duckie passengers have a different color. Add them as well.
+            mask = (mask_img == m[2]) + (mask_img == [132, 108, 22])
+            mask = mask.all(axis=-1)
         else:
             mask = (mask_img == m[2]).all(axis=-1)
         result[mask] = m[1]
+
+    # Then we take the bg classes and make sure they are mapped to 0
+    for m in BG_MAP[1:]:
+        mask = mask_img == m[2]
+        mask = mask.all(axis=-1)
+        result[mask] = 0
 
     return result
 
@@ -237,8 +250,11 @@ def prepare_seg_dataset():
             # Resize labels to match size of transformer patch space
             seg_mask_small = cv2.resize(seg_mask, (60, 60), interpolation=cv2.INTER_NEAREST)
 
+            # Map the classes back to a clean RGB picture
+            rgb_mask = c_to_rgb(seg_mask)
+
             # Save image and labels for future torch training
             img.save(os.path.join('..', 'data', 'torch', split, f'{i}_x.png'))
-            cv2.imwrite(os.path.join('..', 'data', 'torch', split, f'{i}_y.png'), seg_mask)
+            cv2.imwrite(os.path.join('..', 'data', 'torch', split, f'{i}_y.png'), rgb_mask[:, :, [2, 1, 0]])
             torch.save(torch.from_numpy(seg_mask_small).reshape((-1,)),
                        f=os.path.join('..', 'data', 'torch', split, f'{i}_y.pt'))

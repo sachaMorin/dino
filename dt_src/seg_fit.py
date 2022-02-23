@@ -240,6 +240,7 @@ if __name__ == '__main__':
         os.mkdir(os.path.join(DATA_PATH, 'torch', 'test'))
         os.mkdir(os.path.join(DATA_PATH, 'torch', 'val'))
         prepare_seg_dataset()
+    exit()
 
     # Number of transformer blocks to use in the backbone
     for blocks in [1, 4, 12]:
@@ -263,7 +264,7 @@ if __name__ == '__main__':
 
             if blocks < 5:
                 # MLP Head + Fine tune backbone
-                # Only finetune with fewer than 5 blocks, migh otherwise run out of GPU RAM
+                # Only finetune with fewer than 5 blocks, might otherwise run out of GPU RAM
                 # Start from frozen linear checkpoint
                 ck_file_name = str(blocks) + '_' + 'mlp_frozen' + ('_grayscale' if grayscale else '') + '.ckpt'
                 mlp_dino = DINOSeg.load_from_checkpoint(os.path.join(RESULTS_PATH, ck_file_name))
