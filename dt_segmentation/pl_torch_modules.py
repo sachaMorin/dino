@@ -100,8 +100,9 @@ class Linear(torch.nn.Module):
 class DINOSeg(pl.LightningModule):
     """DINO + Segmentation Head"""
 
-    def __init__(self, n_blocks, train_path, val_path, test_path, write_path, head='linear', batch_size=1, lr=1e-6, optimizer=AdamW, freeze_backbone=True,
-                 max_epochs=200, grayscale=False, n_classes=7):
+    def __init__(self, n_blocks, train_path, val_path, test_path, write_path, head='linear', batch_size=1, lr=1e-6,
+                 optimizer=AdamW, freeze_backbone=True,
+                 max_epochs=200, patience=10, grayscale=False, n_classes=7):
         super().__init__()
         self.n_blocks = n_blocks
         self.head = head
@@ -110,6 +111,7 @@ class DINOSeg(pl.LightningModule):
         self.optimizer = optimizer
         self.freeze_backbone = freeze_backbone
         self.max_epochs = max_epochs
+        self.patience=patience
         self.grayscale = grayscale
         self.n_classes = n_classes
 
@@ -213,6 +215,7 @@ class DINOSeg(pl.LightningModule):
             self.unfreeze_bb()
 
         if ck_file_name is None:
+            # Create checkpoint file name
             ck_file_name = str(self.n_blocks) + '_' + self.head \
                            + ('_frozen' if self.freeze_backbone else '_finetuned') \
                            + ('_grayscale' if self.grayscale else '')
@@ -228,7 +231,7 @@ class DINOSeg(pl.LightningModule):
             EarlyStopping(
                 monitor="val_acc",
                 mode='max',
-                patience=10)
+                patience=self.patience)
         ]
 
         trainer = Trainer(gpus=1,
