@@ -3,12 +3,12 @@
 Deprecated do not use."""
 import os
 import pandas as pd
-from dt.dt_segmentation.dt_utils import CLASS_MAP
+from dt_segmentation.dt_utils import CLASS_MAP
 from sklearn.metrics import jaccard_score, balanced_accuracy_score, confusion_matrix
 import numpy as np
 pd.options.display.float_format = '{:,.3f}'.format
 
-results = pd.read_pickle(os.path.join('../..', 'results', 'test_pred_4_grayscale.pkl'))
+results = pd.read_pickle(os.path.join('..', 'results', 'test_pred_4_grayscale.pkl'))
 
 iou = dict( reg=list(), nn=list(), dino=list())
 

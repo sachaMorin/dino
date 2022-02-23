@@ -9,8 +9,8 @@ from . import vision_transformer as vits
 
 DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-DATA_PATH = os.path.join('../..', 'data', 'dt_sim')
-RESULTS_PATH = os.path.join('../..', 'results')
+DATA_PATH = os.path.join('..', 'data', 'dt_sim')
+RESULTS_PATH = os.path.join('..', 'results')
 
 
 def get_dino(patch_size=8, device=DEVICE):
@@ -77,7 +77,7 @@ def process_attentions(attentions, threshold=None, patch_size=8):
     return attentions
 
 
-def dt_frames(subset=None, max=None, path=os.path.join('../..', 'data', 'dt', 'frames'), label_path=None):
+def dt_frames(subset=None, max=None, path=os.path.join('..', 'data', 'dt', 'frames'), label_path=None):
     """Generator to iterate over the dt object detection frames."""
     files = [f for f in os.listdir(path) if f.endswith('.png') or f.endswith('.jpg')]
     files.sort()

@@ -10,11 +10,11 @@ from dt_segmentation import DINOSeg
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
-RESULTS_PATH = os.path.join('..', 'results')
-train_path = os.path.join('..', 'data', 'dt_real_voc_train')
-val_path = os.path.join('..',  'data', 'dt_real_voc_val')
-test_path = os.path.join('..', 'data', 'dt_real_voc_test')
-write_path = os.path.join('..', 'models')
+RESULTS_PATH = os.path.join('', 'results')
+train_path = os.path.join('', 'data', 'dt_real_voc_train')
+val_path = os.path.join('', 'data', 'dt_real_voc_val')
+test_path = os.path.join('', 'data', 'dt_real_voc_test')
+write_path = os.path.join('', 'models')
 
 # Main Segmentation experiment for our report
 MAX_EPOCHS = 100
