@@ -10,7 +10,7 @@ import numpy as np
 import torch
 import os
 import glob
-from sklearn.metrics import balanced_accuracy_score
+from sklearn.metrics import balanced_accuracy_score, jaccard_score, f1_score
 from PIL import Image
 import cv2
 
@@ -33,7 +33,7 @@ class DuckieSegDataset(Dataset):
 
     def __init__(self, path, grayscale=False):
         self.path = path
-        self.files = glob.glob(os.path.join(path, 'JPEGImages',  "*.jpg"))
+        self.files = glob.glob(os.path.join(path, 'JPEGImages', "*.jpg"))
         self.len = len(self.files)
         t = [pth_transforms.Grayscale(num_output_channels=3)] if grayscale else []
         t += [
@@ -100,9 +100,9 @@ class Linear(torch.nn.Module):
 class DINOSeg(pl.LightningModule):
     """DINO + Segmentation Head"""
 
-    def __init__(self, n_blocks, train_path, val_path, test_path, write_path, head='linear', batch_size=1, lr=1e-6,
-                 optimizer=AdamW, freeze_backbone=True,
-                 max_epochs=200, patience=10, grayscale=False, n_classes=7):
+    def __init__(self, n_blocks, train_path, val_path, test_path, write_path, class_names=None, head='linear',
+                 batch_size=1, lr=1e-6, optimizer=AdamW, freeze_backbone=True, max_epochs=200, patience=10,
+                 grayscale=False, n_classes=7, comet_logger=None):
         super().__init__()
         self.n_blocks = n_blocks
         self.head = head
@@ -111,9 +111,11 @@ class DINOSeg(pl.LightningModule):
         self.optimizer = optimizer
         self.freeze_backbone = freeze_backbone
         self.max_epochs = max_epochs
-        self.patience=patience
+        self.patience = patience
         self.grayscale = grayscale
         self.n_classes = n_classes
+        self.comet_logger = comet_logger
+        self.class_names = class_names
 
         # First load dino to "cpu"
         dino = get_dino(8, device='cpu')
@@ -154,7 +156,9 @@ class DINOSeg(pl.LightningModule):
         probs = self(x)
         y = y.reshape((-1,)).long()
         loss = F.nll_loss(probs, y)
-        return loss
+
+        pred = probs.argmax(dim=-1).detach().cpu()
+        return {"loss": loss, "pred": pred, "gt": y.squeeze(0), "probs": probs.detach().cpu()}
 
     def predict(self, x, tensor=True):
         """Return nd array of class predictions for input.
@@ -184,17 +188,46 @@ class DINOSeg(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         """Compute validation prediction."""
         x, y = batch
-        pred = self.predict(x, tensor=True)
-        return pred, y.squeeze(0)
+        probs = self(x).detach().cpu()
+        pred = probs.argmax(dim=-1)
+        return {"pred": pred, "gt": y.squeeze(0), "probs": probs}
 
-    def validation_epoch_end(self, outputs):
-        """Report validation accuracy over the whole validation split."""
-        pred, gt = zip(*outputs)
-        pred = torch.cat(pred).cpu().numpy().flatten()
-        gt = torch.cat(gt).cpu().numpy().flatten()
+    def validation_epoch_end(self, outputs, prefix='val'):
+        """Report various metrics over the whole validation split."""
+        pred = torch.cat([x["pred"] for x in outputs]).cpu().numpy().flatten()
+        gt = torch.cat([x["gt"] for x in outputs]).cpu().numpy().flatten()
+        probs = torch.cat([x["probs"] for x in outputs]).cpu().numpy()
 
+        # Log metrics
         acc = balanced_accuracy_score(gt, pred)
-        self.log('val_acc', acc, prog_bar=True)
+        f1 = f1_score(gt, pred, average='macro')
+        iou = jaccard_score(gt, pred, average='macro')
+        self.log(prefix + '_acc', acc, prog_bar=True)
+        self.log(prefix + '_iou', iou, prog_bar=True)
+        self.log(prefix + '_F1', f1, prog_bar=True)
+
+        # Log confusion matrix
+        # We don't log the confusion matrix over the train set to save time
+        if self.comet_logger is not None and prefix != 'train':
+            desired = np.zeros(probs.shape)
+            desired[np.arange(desired.shape[0]), gt] = 1
+            self.comet_logger.experiment.log_confusion_matrix(desired, probs, title=prefix, labels=self.class_names,
+                                                              file_name=f"{prefix}_epoch_{self.current_epoch}.json")
+
+        return {prefix + '_acc': acc, prefix + '_iou': iou, prefix + '_F1': f1}
+
+    def test_step(self, batch, batch_idx):
+        """Compute test prediction."""
+        return self.validation_step(batch, batch_idx)
+
+    def test_epoch_end(self, outputs):
+        """Report various metrics over the whole test split."""
+        metrics = self.validation_epoch_end(outputs, prefix='test')
+        return metrics
+
+    def training_epoch_end(self, outputs):
+        """Report various metrics over the whole train split."""
+        metrics = self.validation_epoch_end(outputs, prefix='train')
 
     def train_dataloader(self):
         return DataLoader(DuckieSegDataset(self.train_path), batch_size=self.batch_size,
@@ -237,8 +270,17 @@ class DINOSeg(pl.LightningModule):
         trainer = Trainer(gpus=1,
                           max_epochs=self.max_epochs,
                           check_val_every_n_epoch=1,
-                          callbacks=callbacks)
+                          callbacks=callbacks,
+                          logger=self.comet_logger)
         trainer.fit(self)
+
+        # Also test!
+        trainer.test(self)
+
+        # If we have a logger, log the checkpoint
+        if self.comet_logger is not None:
+            ck_path = os.path.join(self.write_path, ck_file_name + '.ckpt')
+            self.comet_logger.experiment.log_asset(ck_path)
 
     def freeze_bb(self):
         for p in self.dino.parameters():
