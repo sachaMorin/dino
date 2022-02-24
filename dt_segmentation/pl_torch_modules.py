@@ -25,7 +25,17 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 
-from .dt_utils import RESULTS_PATH, get_dino
+from .dt_utils import get_dino
+
+
+def get_transforms(grayscale=False):
+    t = [pth_transforms.Grayscale(num_output_channels=3)] if grayscale else []
+    t += [
+        pth_transforms.Resize((480, 480)),
+        pth_transforms.ToTensor(),
+        pth_transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+    ]
+    return pth_transforms.Compose(t)
 
 
 class DuckieSegDataset(Dataset):
@@ -35,13 +45,7 @@ class DuckieSegDataset(Dataset):
         self.path = path
         self.files = glob.glob(os.path.join(path, 'JPEGImages', "*.jpg"))
         self.len = len(self.files)
-        t = [pth_transforms.Grayscale(num_output_channels=3)] if grayscale else []
-        t += [
-            pth_transforms.Resize((480, 480)),
-            pth_transforms.ToTensor(),
-            pth_transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
-        ]
-        self.t = pth_transforms.Compose(t)
+        self.t = get_transforms(grayscale)
 
     def __len__(self):
         return self.len
@@ -160,10 +164,10 @@ class DINOSeg(pl.LightningModule):
         pred = probs.argmax(dim=-1).detach().cpu()
         return {"loss": loss, "pred": pred, "gt": y.squeeze(0), "probs": probs.detach().cpu()}
 
-    def predict(self, x, tensor=True):
+    def predict(self, x, tensor=False):
         """Return nd array of class predictions for input.
         Set tensor=True to return a tensor instead."""
-        prob = self(x)
+        prob = self(x.to(self.device))
         if tensor:
             return torch.argmax(prob, dim=-1)
         else:
@@ -178,7 +182,7 @@ class DINOSeg(pl.LightningModule):
         # Predict data loader
         self.eval()
         with torch.no_grad():
-            result = torch.cat([self.predict(b.to(self.device)).cpu() for b, _ in data_loader]).numpy()
+            result = torch.cat([self.predict(b.to(self.device), tensor=True).cpu() for b, _ in data_loader]).numpy()
 
         # Return model to original device
         self.to(device)
