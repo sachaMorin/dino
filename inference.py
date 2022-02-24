@@ -12,7 +12,7 @@ from PIL import Image
 import cv2
 
 from dt_segmentation import DINOSeg, DuckieSegDataset
-from labelme2voc import parse_class_names
+from dt_segmentation.dt_utils import parse_class_names
 import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning)
