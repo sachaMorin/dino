@@ -17,7 +17,7 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
 
-def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, patience, n_blocks, finetune, seed,
+def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, patience, n_blocks, finetune, seed, pretrain_on_sim=False,
                    ck_file_name=None, comet_tag=None):
     """Fit coarse segmentation model on Duckietown data. We use DINO as the backbone and output a prediction for
     every 8x8 token in the image.
@@ -52,11 +52,6 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, pat
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    # Fit DINO backbone for duckie segmentation
-    train_path = os.path.join(data_path, 'dt_real_voc_train')
-    val_path = os.path.join(data_path, 'dt_real_voc_val')
-    test_path = os.path.join(data_path, 'dt_real_voc_test')
-
     # Initialize comet logger if requested
     if comet_tag is not None:
         comet_logger = CometLogger(
@@ -72,7 +67,7 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, pat
 
     # Number of transformer blocks to use in the backbone
     # MLP Head
-    mlp_frozen = DINOSeg(head='mlp', train_path=train_path, val_path=val_path, test_path=test_path,
+    mlp_frozen = DINOSeg(head='mlp', data_path=data_path, pretrain_on_sim=pretrain_on_sim,
                          write_path=write_path, n_classes=len(class_names), class_names=class_names,
                          freeze_backbone=True, optimizer=Adam, lr=learning_rate, batch_size=batch_size,
                          n_blocks=n_blocks, max_epochs=epochs, patience=patience, comet_logger=comet_logger)
@@ -92,7 +87,8 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, pat
     results = pd.DataFrame.from_dict(dict(ground_truth=gt,
                                           pred_mlp_frozen=pred_mlp_frozen))
 
-    # Fine tune, we don't do this for now
+    # Fine tune
+    # This is logged as a separate comet experiment
     if finetune:
         # Initialize comet logger if requested
         if comet_tag is not None:
@@ -110,7 +106,7 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, pat
         mlp_dino = DINOSeg.load_from_checkpoint(os.path.join(write_path, ck_file_name + '.ckpt'))
         mlp_dino.freeze_backbone = False
         mlp_dino.optimizer = AdamW
-        mlp_dino.lr /= 2  # Lower the learning rate for fine-tuning
+        mlp_dino.lr /= 10  # Lower the learning rate for fine-tuning
 
         # Add new comet logger
         mlp_dino.comet_logger = comet_logger
@@ -133,9 +129,10 @@ if __name__ == '__main__':
     parser.add_argument("--learning_rate", '-lr', help="Learning rate", required=False, default=1e-3, type=float)
     parser.add_argument("--patience", '-p', help="Patience for early stopping", required=False, default=200, type=int)
     parser.add_argument("--n_blocks", help="Number of DINO blocks to use", required=False, default=1, type=int)
+    parser.add_argument("--pretrain_on_sim", help="Pretrain on simulation data.", required=False, action='store_true')
     parser.add_argument("--finetune",
                         help="Finetune DINO backbone after an initial training phase with a frozen backbone",
-                        required=False, default=False, type=bool)
+                        required=False, action='store_true')
     parser.add_argument("--comet_tag",
                         help=" If a comet tag is provided we log the experiments to comet with the provided tag.",
                         required=False, default=None, type=str)
