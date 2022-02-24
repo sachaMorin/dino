@@ -30,7 +30,7 @@ def parse_class_names(path):
             assert class_name == "_background_"
         class_names.append(class_name)
     class_names = tuple(class_names)
-    return class_names
+    return class_names, class_name_to_id
 
 
 def main():
@@ -58,7 +58,7 @@ def main():
         )
     print("Creating dataset:", args.output_dir)
 
-    class_names = parse_class_names(args.labels)
+    class_names, class_name_to_id = parse_class_names(args.labels)
     print("class_names:", class_names)
     out_class_names_file = osp.join(args.output_dir, "class_names.txt")
     with open(out_class_names_file, "w") as f:
