@@ -22,39 +22,40 @@ warnings.filterwarnings("ignore", category=UserWarning)
 def inference(checkpoint_path, image_dir, target_dir, labels_path):
     """Use a trained PL checkpoint to run inference on all images in image_dir."""
     mlp_dino = DINOSeg.load_from_checkpoint(checkpoint_path).to('cuda:0' if torch.cuda.is_available() else 'cpu')
+    with torch.no_grad():
 
-    if not os.path.exists(target_dir):
-        os.makedirs(target_dir)
+        if not os.path.exists(target_dir):
+            os.makedirs(target_dir)
 
-    # Get transforms
-    transforms = get_transforms()
+        # Get transforms
+        transforms = get_transforms()
 
-    # Get class names and length
-    class_names, _ = parse_class_names(labels_path)
+        # Get class names and length
+        class_names, _ = parse_class_names(labels_path)
 
-    for filename in glob.glob(os.path.join(image_dir, "*.jpg")):
-        with open(filename, 'rb') as file:
-            img = Image.open(file)
-            x = img.convert('RGB')
+        for filename in glob.glob(os.path.join(image_dir, "*.jpg")):
+            with open(filename, 'rb') as file:
+                img = Image.open(file)
+                x = img.convert('RGB')
 
-        x_transformed = transforms(x)
-        pred = mlp_dino.predict(x_transformed.unsqueeze(0)).reshape((60, 60))
+            x_transformed = transforms(x)
+            pred = mlp_dino.predict(x_transformed.unsqueeze(0)).reshape((60, 60))
 
-        # Resize the original image and the predictions to 480 x 480
-        img = cv2.resize(np.array(x), (480, 480))
-        pred = np.kron(pred, np.ones((8, 8))).astype(int)  # Upscale the predictions back to 480x480
+            # Resize the original image and the predictions to 480 x 480
+            img = cv2.resize(np.array(x), (480, 480))
+            pred = np.kron(pred, np.ones((8, 8))).astype(int)  # Upscale the predictions back to 480x480
 
 
-        # Save image
-        viz = imgviz.label2rgb(
-            pred,
-            imgviz.rgb2gray(img),
-            font_size=15,
-            label_names=class_names,
-            loc="rb",
-        )
-        f = filename.split(os.sep)[-1]
-        imgviz.io.imsave(os.path.join(target_dir, f), viz)
+            # Save image
+            viz = imgviz.label2rgb(
+                pred,
+                imgviz.rgb2gray(img),
+                font_size=15,
+                label_names=class_names,
+                loc="rb",
+            )
+            f = filename.split(os.sep)[-1]
+            imgviz.io.imsave(os.path.join(target_dir, f), viz)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
