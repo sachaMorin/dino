@@ -1,4 +1,4 @@
-"""Script to fit classifiers on the duckietown simulation segmentation dataset.
+"""Code to fit classifiers on the duckietown simulation segmentation dataset.
 
 Train data should be organized in the folder data/torch/train.
 Val data should be organized in the folder data/torch/val.
@@ -104,9 +104,9 @@ class Linear(torch.nn.Module):
 class DINOSeg(pl.LightningModule):
     """DINO + Segmentation Head"""
 
-    def __init__(self, n_blocks, train_path, val_path, test_path, write_path, class_names=None, head='linear',
+    def __init__(self, data_path, write_path, class_names=None, head='linear', n_blocks=1,
                  batch_size=1, lr=1e-6, optimizer=AdamW, freeze_backbone=True, max_epochs=200, patience=10,
-                 grayscale=False, n_classes=7, comet_logger=None):
+                 grayscale=False, n_classes=7, pretrain_on_sim=False, comet_logger=None):
         super().__init__()
         self.n_blocks = n_blocks
         self.head = head
@@ -120,6 +120,7 @@ class DINOSeg(pl.LightningModule):
         self.n_classes = n_classes
         self.comet_logger = comet_logger
         self.class_names = class_names
+        self.pretrain_on_sim = pretrain_on_sim
 
         # First load dino to "cpu"
         dino = get_dino(8, device='cpu')
@@ -137,10 +138,16 @@ class DINOSeg(pl.LightningModule):
         # Save hyperparameters to checkpoint
         self.save_hyperparameters()
 
-        # Paths to data
-        self.train_path = train_path
-        self.val_path = val_path
-        self.test_path = test_path
+        # Paths to real train data
+        self.train_path = os.path.join(data_path, 'dt_real_voc_train')
+        self.val_path = os.path.join(data_path, 'dt_real_voc_val')
+        self.test_path = os.path.join(data_path, 'dt_real_voc_test')
+
+        # Paths to sim data for finetuning
+        self.train_path_sim = os.path.join(data_path, 'dt_sim_voc_train')
+        self.val_path_sim = os.path.join(data_path, 'dt_sim_voc_val')
+        self.test_path_sim = os.path.join(data_path, 'dt_sim_voc_test')
+
         self.write_path = write_path
 
     def forward(self, x):
@@ -233,12 +240,20 @@ class DINOSeg(pl.LightningModule):
         """Report various metrics over the whole train split."""
         metrics = self.validation_epoch_end(outputs, prefix='train')
 
-    def train_dataloader(self):
-        return DataLoader(DuckieSegDataset(self.train_path), batch_size=self.batch_size,
-                          shuffle=True, num_workers=12)
+    def train_dataloader(self, sim=False):
+        if sim:
+            data = DuckieSegDataset(self.train_path_sim)
+        else:
+            data = DuckieSegDataset(self.train_path)
 
-    def val_dataloader(self):
-        return DataLoader(DuckieSegDataset(self.val_path), batch_size=self.batch_size,
+        # We use a sampler to make sure we have 100 images per epoch, regardless of the dataset we are using
+        sampler = torch.utils.data.WeightedRandomSampler(torch.ones((len(data), )), num_samples=100, replacement=True)
+
+        return DataLoader(data, batch_size=self.batch_size, num_workers=12, sampler=sampler)
+
+    def val_dataloader(self, sim=False):
+        path = self.val_path_sim if sim else self.val_path
+        return DataLoader(DuckieSegDataset(path), batch_size=self.batch_size,
                           shuffle=False, num_workers=12)
 
     def test_dataloader(self):
@@ -265,12 +280,26 @@ class DINOSeg(pl.LightningModule):
                 dirpath=self.write_path,
                 filename=ck_file_name,
                 auto_insert_metric_name=False),
-            EarlyStopping(
-                monitor="val_acc",
-                mode='max',
-                patience=self.patience)
+            # EarlyStopping(
+            #     monitor="val_acc",
+            #     mode='max',
+            #     patience=self.patience)
         ]
 
+        if self.pretrain_on_sim:
+            print('Pretraining on simulation data...')
+            # Pretrain on sim, but don't log
+            data_sim_train = self.train_dataloader(sim=True)
+            data_sim_val = self.val_dataloader(sim=True)
+            trainer = Trainer(gpus=1,
+                              max_epochs=self.max_epochs,
+                              check_val_every_n_epoch=1,
+                              callbacks=callbacks,
+                              logger=None)
+            trainer.fit(self, train_dataloader=data_sim_train, val_dataloaders=data_sim_val)
+
+
+        # Main training
         trainer = Trainer(gpus=1,
                           max_epochs=self.max_epochs,
                           check_val_every_n_epoch=1,
