@@ -6,12 +6,13 @@ import os
 import glob
 import argparse
 
+import torch
 import numpy as np
 import imgviz
 from PIL import Image
 import cv2
 
-from dt_segmentation import DINOSeg, DuckieSegDataset
+from dt_segmentation.pl_torch_modules import DINOSeg, get_transforms
 from dt_segmentation.dt_utils import parse_class_names
 import warnings
 
@@ -20,13 +21,13 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 def inference(checkpoint_path, image_dir, target_dir, labels_path):
     """Use a trained PL checkpoint to run inference on all images in image_dir."""
-    mlp_dino = DINOSeg.load_from_checkpoint(checkpoint_path)
+    mlp_dino = DINOSeg.load_from_checkpoint(checkpoint_path).to('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
 
     # Get transforms
-    transforms = DuckieSegDataset("dummy").t
+    transforms = get_transforms()
 
     # Get class names and length
     class_names, _ = parse_class_names(labels_path)
