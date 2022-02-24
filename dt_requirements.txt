@@ -7,3 +7,5 @@ pandas==1.4.1
 Pillow==9.0.1
 pytorch_lightning==1.5.10
 scikit_image==0.19.2
+torch==1.10.2
+torchvision==0.11.3
