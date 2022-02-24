@@ -2,9 +2,9 @@ imgviz==1.4.1
 labelme==4.6.0
 matplotlib==3.2.2
 numpy==1.22.2
-opencv-python==4.5.5.62
+opencv_python==4.5.5.62
 pandas==1.4.1
 Pillow==9.0.1
-pytorch-lightning==1.5.10
-scikit-image==0.19.2
-scikit-learn==1.0.2
+pytorch_lightning==1.5.10
+scikit_image==0.19.2
+scikit_learn==1.0.2
