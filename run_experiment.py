@@ -68,7 +68,7 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, pat
         comet_logger = None
 
     # Get class names and length
-    class_names = parse_class_names(os.path.join(data_path, 'labels.txt'))
+    class_names, _ = parse_class_names(os.path.join(data_path, 'labels.txt'))
 
     # Number of transformer blocks to use in the backbone
     # MLP Head
