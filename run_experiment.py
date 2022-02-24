@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from torch.optim import Adam, AdamW, SGD
 from pytorch_lightning.loggers import CometLogger
-from labelme2voc import parse_class_names
+from dt_segmentation.dt_utils import parse_class_names
 
 from dt_segmentation import DINOSeg
 import warnings

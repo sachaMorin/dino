@@ -16,21 +16,7 @@ import numpy as np
 
 import labelme
 
-def parse_class_names(path):
-    class_names = []
-    class_name_to_id = {}
-    for i, line in enumerate(open(path).readlines()):
-        class_id = i - 1  # starts with -1
-        class_name = line.strip()
-        class_name_to_id[class_name] = class_id
-        if class_id == -1:
-            assert class_name == "__ignore__"
-            continue
-        elif class_id == 0:
-            assert class_name == "_background_"
-        class_names.append(class_name)
-    class_names = tuple(class_names)
-    return class_names, class_name_to_id
+from dt_segmentation.dt_utils import parse_class_names
 
 
 def main():
