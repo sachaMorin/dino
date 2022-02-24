@@ -1,7 +1,9 @@
 .comet.config
+lightning_logs
 .idea/
 data/
 results/
+models/
 test.py
 
 # Byte-compiled / optimized / DLL files
