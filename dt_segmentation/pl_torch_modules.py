@@ -281,7 +281,7 @@ class DINOSeg(pl.LightningModule):
         data = DuckieSegDataset(path, augmented=self.augmented)
 
         # We use a sampler to make sure we have 100 images per epoch, regardless of the dataset we are using
-        sampler = torch.utils.data.WeightedRandomSampler(torch.ones((len(data),)), num_samples=100, replacement=True)
+        sampler = torch.utils.data.WeightedRandomSampler(torch.ones((len(data),)), num_samples=200, replacement=True)
 
         return DataLoader(data, batch_size=self.batch_size, num_workers=12, sampler=sampler)
 
@@ -327,7 +327,7 @@ class DINOSeg(pl.LightningModule):
             data_sim_val = self.val_dataloader(sim=False)
             trainer = Trainer(gpus=1,
                               max_epochs=self.max_epochs,
-                              check_val_every_n_epoch=1,
+                              check_val_every_n_epoch=5,
                               callbacks=callbacks,
                               logger=None)
             trainer.fit(self, train_dataloader=data_sim_train, val_dataloaders=data_sim_val)
@@ -358,8 +358,8 @@ class DINOSeg(pl.LightningModule):
 
         # If we have a logger, log the checkpoint
         if self.comet_logger is not None:
-            ck_path = os.path.join(self.write_path, ck_file_name + '.ckpt')
-            self.comet_logger.experiment.log_asset(ck_path)
+            best = callbacks[0].best_model_path
+            self.comet_logger.experiment.log_asset(best)
 
     def freeze_bb(self):
         for p in self.dino.parameters():

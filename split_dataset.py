@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Split the outputs of labelme2voc or sim2voc to train/test splits."""
+"""Split the outputs of labelme2voc or sim2voc to train/val/test splits."""
 import shutil
 import glob
 import os
@@ -39,7 +39,7 @@ def main():
         else:
             split = '_train'
 
-        file = filename.split(os.sep)[-1][:-4]  # This will be the jpg, we need to change the extenson
+        file = filename.split(os.sep)[-1][:-4]  # This will be the jpg, we need to change the extension
         for dir, ext in [("JPEGImages", 'jpg'), ("SegmentationClass", 'npy'), ("SegmentationClassPNG", 'png'),
                          ("SegmentationClassVisualization", 'jpg')]:
             file_i = file + '.' + ext

@@ -16,8 +16,8 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
 
-def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, patience, n_blocks, finetune, seed,
-                   augmentations=False, pretrain_on_sim=False, ck_file_name=None, comet_tag=None):
+def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, n_blocks, finetune,
+                   augmentations=False, pretrain_on_sim=False, ck_file_name=None, comet_tag=None, random_state=42, patience=10):
     """Fit coarse segmentation model on Duckietown data. We use DINO as the backbone and output a prediction for
     every 8x8 token in the image.
 
@@ -34,7 +34,7 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, pat
     learning_rate : float,
         Learning rate.
     patience : int,
-        Patience for early stoppping.
+        Patience for early stopping. Currently ignored.
     n_blocks : n_blocks,
         Number of DINO blocks to use in the backbone. Should range from 1 to 12
     finetune : bool,
@@ -44,7 +44,7 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, pat
         Pretrain on the larger simulation dataset before training on real data.
     augmentations : bool,
         Train on augmentations.
-    seed : int,
+    random_state : int,
         Random seed.
     ck_file_name : str, default:None
         Name of the checkpoint and prediction file names.
@@ -52,8 +52,8 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, pat
         If a comet tag is provided we log the experiments to comet with the provided tag.
     """
     # Seed experiments
-    np.random.seed(seed)
-    torch.manual_seed(seed)
+    np.random.seed(random_state)
+    torch.manual_seed(random_state)
 
     # Initialize comet logger if requested
     if comet_tag is not None:
@@ -62,6 +62,7 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, pat
             project_name="duck"
         )
         comet_logger.experiment.add_tag(comet_tag)
+        comet_logger.experiment.log_parameter("random_state", random_state)
     else:
         comet_logger = None
 
@@ -77,7 +78,7 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, pat
 
     if ck_file_name is None:
         # Generate a checkpoint file name
-        ck_file_name = str(n_blocks) + '_' + 'mlp_frozen_' + str(seed)
+        ck_file_name = str(n_blocks) + '_' + 'mlp_frozen_' + str(random_state)
 
     mlp_frozen.fit(ck_file_name)
 
@@ -129,7 +130,7 @@ if __name__ == '__main__':
     parser.add_argument("--comet_tag",
                         help=" If a comet tag is provided we log the experiments to comet with the provided tag.",
                         required=False, default=None, type=str)
-    parser.add_argument("--seed", help="random_seed", required=False, default=42, type=int)
+    parser.add_argument("--random_state", help="Random seed", required=False, default=42, type=int)
     args = parser.parse_args()
 
     run_experiment(**vars(args))
