@@ -12,7 +12,6 @@ import os
 import glob
 from sklearn.metrics import balanced_accuracy_score, jaccard_score, f1_score
 from PIL import Image
-import cv2
 import matplotlib.pyplot as plt
 
 from torch import nn
@@ -348,7 +347,7 @@ class DINOSeg(pl.LightningModule):
         ]
         trainer = Trainer(gpus=1,
                           max_epochs=self.max_epochs,
-                          check_val_every_n_epoch=1,
+                          check_val_every_n_epoch=5,
                           callbacks=callbacks,
                           logger=self.comet_logger)
         trainer.fit(self)

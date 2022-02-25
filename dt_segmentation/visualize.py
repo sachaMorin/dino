@@ -11,8 +11,8 @@ import torch
 import imgviz
 from PIL import Image
 
-from dt_segmentation.pl_torch_modules import DINOSeg
-from dt_segmentation.dt_utils import parse_class_names
+from src.pl_torch_modules import DINOSeg
+from src.dt_utils import parse_class_names
 import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     parser.add_argument("image_dir", help="Images to run inference on")
     parser.add_argument("target_dir", help="Where to save predictions")
     parser.add_argument("--labels_path", help="Txt file with class labels.", required=False,
-                        default=os.path.join("data", "labels.txt"))
+                        default=os.path.join("../data", "labels.txt"))
     args = parser.parse_args()
 
     inference(**vars(args))

@@ -6,11 +6,11 @@ import argparse
 
 import numpy as np
 import torch
-from torch.optim import Adam, AdamW, SGD
+from torch.optim import Adam, AdamW
 from pytorch_lightning.loggers import CometLogger
-from dt_segmentation.dt_utils import parse_class_names
+from src.dt_utils import parse_class_names
 
-from dt_segmentation import DINOSeg
+from src.pl_torch_modules import DINOSeg
 import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning)

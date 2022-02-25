@@ -7,12 +7,12 @@ import torch
 from torchvision import transforms as pth_transforms
 from PIL import Image
 
-from . import vision_transformer as vits
+from .vision_transformer import vit_small
 
 DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-DATA_PATH = os.path.join('..', 'data', 'dt_sim')
-RESULTS_PATH = os.path.join('..', 'results')
+DATA_PATH = os.path.join('../..', 'data', 'dt_sim')
+RESULTS_PATH = os.path.join('../..', 'results')
 
 
 def get_dino(patch_size=8, device=DEVICE):
@@ -20,7 +20,7 @@ def get_dino(patch_size=8, device=DEVICE):
     # From the original DINO code
     # Build model
     url = "dino_deitsmall8_300ep_pretrain/dino_deitsmall8_300ep_pretrain.pth"
-    model = vits.__dict__['vit_small'](patch_size=patch_size, num_classes=0)
+    model =vit_small(patch_size=patch_size, num_classes=0)
     model.to(device)
     state_dict = torch.hub.load_state_dict_from_url(url="https://dl.fbaipublicfiles.com/dino/" + url)
     model.load_state_dict(state_dict, strict=True)
@@ -79,7 +79,7 @@ def process_attentions(attentions, threshold=None, patch_size=8):
     return attentions
 
 
-def dt_frames(subset=None, max=None, path=os.path.join('..', 'data', 'dt', 'frames'), label_path=None):
+def dt_frames(subset=None, max=None, path=os.path.join('../..', 'data', 'dt', 'frames'), label_path=None):
     """Generator to iterate over the dt object detection frames."""
     files = [f for f in os.listdir(path) if f.endswith('.png') or f.endswith('.jpg')]
     files.sort()

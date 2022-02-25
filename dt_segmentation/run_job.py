@@ -4,6 +4,7 @@
 If you use a job number higher than the current number of experiments in the config, the jobs marked with job mod max_job
 will be executed with a different random seed. E.g., if you have 3 experiments in the config and you call the jobs
  0, 1, ..., 8, all experiments will be executed 3 times with different seeds."""
+import comet_ml
 import os
 import argparse
 
@@ -28,7 +29,7 @@ parser.add_argument('--data_path',
                     '-d',
                     help='Data path. Otherwise assumes a \'data\' folder in current working directory.',
                     type=str,
-                    default=os.path.join(os.getcwd(), 'data'))
+                    default=os.path.join(os.getcwd(), '../data'))
 parser.add_argument('--write_path',
                     '-w',
                     help='Where to write temp files. Otherwise assumes current working directory.',

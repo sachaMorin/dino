@@ -16,7 +16,7 @@ import numpy as np
 
 import labelme
 
-from dt_segmentation.dt_utils import parse_class_names
+from dt_segmentation.src.dt_utils import parse_class_names
 
 
 def main():
