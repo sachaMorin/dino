@@ -14,7 +14,7 @@ Python library to RUN DINO segmenetation in Duckietown.
 # <==: Fill in your project data here
 
 # read project dependencies
-dependencies_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dt_requirements.txt')
+dependencies_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'requirements.txt')
 with open(dependencies_file, 'rt') as fin:
     dependencies = list(filter(lambda line: not line.startswith('#'), fin.read().splitlines()))
 
