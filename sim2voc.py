@@ -37,7 +37,7 @@ import labelme
 # First element is class name
 # Second is class id
 # Third element is the RGB color from simulator rendering. (Not perfect accurate for some class, see rgb_to_c_
-# Fourth element is the displayed color for that class sin seg_viz.py
+# Fourth element is currently not used
 # The simulator likely has more class than the real data, so we will only take the intersection of class_map and
 # the provided labels file
 class_map = [

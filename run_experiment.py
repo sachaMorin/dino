@@ -2,7 +2,6 @@
 """Minimal script to fit DINO backbone for Duckietown segmentation."""
 import comet_ml
 import os
-import pandas as pd
 import argparse
 
 import numpy as np
@@ -69,7 +68,6 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, pat
     # Get class names and length
     class_names, _ = parse_class_names(os.path.join(data_path, 'labels.txt'))
 
-    # Number of transformer blocks to use in the backbone
     # MLP Head
     mlp_frozen = DINOSeg(head='mlp', data_path=data_path, pretrain_on_sim=pretrain_on_sim,
                          write_path=write_path, n_classes=len(class_names), class_names=class_names,
@@ -82,15 +80,6 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, pat
         ck_file_name = str(n_blocks) + '_' + 'mlp_frozen_' + str(seed)
 
     mlp_frozen.fit(ck_file_name)
-    pred_mlp_frozen = mlp_frozen.predict_dl(mlp_frozen.test_dataloader())
-
-    # Get ground truth
-    gt = torch.cat([y_i.flatten() for _, y_i in mlp_frozen.test_dataloader()]).cpu().numpy()
-
-    # Save results
-    # We save ground truth and predictions so we can recompute metrics later on
-    results = pd.DataFrame.from_dict(dict(ground_truth=gt,
-                                          pred_mlp_frozen=pred_mlp_frozen))
 
     # Fine tune
     # This is logged as a separate comet experiment
@@ -117,10 +106,6 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, pat
         mlp_dino.comet_logger = comet_logger
         ck_file_name = ck_file_name + '_finetuned'
         mlp_dino.fit(ck_file_name)
-        results["pred_mlp_finetuned"] = mlp_dino.predict_dl(mlp_dino.test_dataloader())
-
-    file_name = ck_file_name + '.pkl'
-    results.to_pickle(os.path.join(write_path, file_name))
 
 
 if __name__ == '__main__':
