@@ -13,12 +13,16 @@ import glob
 from sklearn.metrics import balanced_accuracy_score, jaccard_score, f1_score
 from PIL import Image
 import cv2
+import matplotlib.pyplot as plt
 
 from torch import nn
 from torch.optim import Adam, AdamW, SGD
 from torch.nn import functional as F
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms as pth_transforms
+
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
 import pytorch_lightning as pl
 from pytorch_lightning import Trainer
@@ -28,24 +32,47 @@ from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from .dt_utils import get_dino
 
 
-def get_transforms(grayscale=False):
-    t = [pth_transforms.Grayscale(num_output_channels=3)] if grayscale else []
-    t += [
-        pth_transforms.Resize((480, 480)),
-        pth_transforms.ToTensor(),
-        pth_transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+def get_transforms():
+    """Return basic transforms (no augmentations). Use this for testing and inference."""
+    t = [
+        A.Resize(480, 480),
+        A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        ToTensorV2(),
     ]
-    return pth_transforms.Compose(t)
+
+    return A.Compose(t)
+
+
+def get_augmented_transforms():
+    """Transforms with augmentations."""
+    t = [
+            A.RandomCrop(360, 360, p=.5),
+            A.RandomCrop(256, 256, p=.25),
+            A.ShiftScaleRotate(shift_limit=0.4, scale_limit=0.4, rotate_limit=30, p=0.5),
+            A.RGBShift(r_shift_limit=10, g_shift_limit=10, b_shift_limit=10, p=0.5),
+            A.RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3, p=0.5),
+            A.HorizontalFlip(p=0.5),
+            A.Resize(480, 480),
+            A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+            ToTensorV2(),
+        ]
+
+    return A.Compose(t)
 
 
 class DuckieSegDataset(Dataset):
     """Wrapper to get the image/label dataset of duckietown."""
 
-    def __init__(self, path, grayscale=False):
+    def __init__(self, path, augmented=False):
         self.path = path
         self.files = glob.glob(os.path.join(path, 'JPEGImages', "*.jpg"))
         self.len = len(self.files)
-        self.t = get_transforms(grayscale)
+        self.mask_resize = pth_transforms.Resize(size=(60, 60), interpolation=pth_transforms.InterpolationMode.NEAREST)
+        self.augmented = augmented
+        if augmented:
+            self.t = get_augmented_transforms()
+        else:
+            self.t = get_transforms()
 
     def __len__(self):
         return self.len
@@ -55,7 +82,7 @@ class DuckieSegDataset(Dataset):
         f = self.files[idx]
         with open(f, 'rb') as file:
             img = Image.open(file)
-            x = img.convert('RGB')
+            x = np.array(img.convert('RGB'))
 
         # Get labels
         file_name = self.files[idx].split(os.sep)[-1][:-4]
@@ -63,9 +90,19 @@ class DuckieSegDataset(Dataset):
         y = np.load(f)
 
         # Resize to the shape of the DINO token output and flatten
-        y = cv2.resize(y, (60, 60), interpolation=cv2.INTER_NEAREST).flatten()
+        transformed = self.t(image=x, mask=y)
 
-        return self.t(x), torch.from_numpy(y)
+        image, mask = transformed['image'], transformed['mask']
+
+        # Debug
+        # if self.augmented:
+        #     plt.imshow(image.permute((1, 2, 0)))
+        #     plt.show()
+
+        # Resize the mask to match the Vision transformer number of tokens
+        mask = self.mask_resize(mask.unsqueeze(0)).flatten()
+
+        return image, mask
 
 
 class MLP(torch.nn.Module):
@@ -106,7 +143,7 @@ class DINOSeg(pl.LightningModule):
 
     def __init__(self, data_path, write_path, class_names=None, head='linear', n_blocks=1,
                  batch_size=1, lr=1e-6, optimizer=AdamW, freeze_backbone=True, max_epochs=200, patience=10,
-                 grayscale=False, n_classes=7, pretrain_on_sim=False, comet_logger=None):
+                 grayscale=False, n_classes=7, pretrain_on_sim=False, comet_logger=None, augmented=True):
         super().__init__()
         self.n_blocks = n_blocks
         self.head = head
@@ -121,6 +158,7 @@ class DINOSeg(pl.LightningModule):
         self.comet_logger = comet_logger
         self.class_names = class_names
         self.pretrain_on_sim = pretrain_on_sim
+        self.augmented = augmented
 
         # First load dino to "cpu"
         dino = get_dino(8, device='cpu')
@@ -241,23 +279,21 @@ class DINOSeg(pl.LightningModule):
         metrics = self.validation_epoch_end(outputs, prefix='train')
 
     def train_dataloader(self, sim=False):
-        if sim:
-            data = DuckieSegDataset(self.train_path_sim)
-        else:
-            data = DuckieSegDataset(self.train_path)
+        path = self.train_path_sim if sim else self.train_path
+        data = DuckieSegDataset(path, augmented=self.augmented)
 
         # We use a sampler to make sure we have 100 images per epoch, regardless of the dataset we are using
-        sampler = torch.utils.data.WeightedRandomSampler(torch.ones((len(data), )), num_samples=100, replacement=True)
+        sampler = torch.utils.data.WeightedRandomSampler(torch.ones((len(data),)), num_samples=100, replacement=True)
 
         return DataLoader(data, batch_size=self.batch_size, num_workers=12, sampler=sampler)
 
     def val_dataloader(self, sim=False):
         path = self.val_path_sim if sim else self.val_path
-        return DataLoader(DuckieSegDataset(path), batch_size=self.batch_size,
+        return DataLoader(DuckieSegDataset(path, augmented=False), batch_size=self.batch_size,
                           shuffle=False, num_workers=12)
 
     def test_dataloader(self):
-        return DataLoader(DuckieSegDataset(self.test_path), batch_size=self.batch_size,
+        return DataLoader(DuckieSegDataset(self.test_path, augmented=False), batch_size=self.batch_size,
                           shuffle=False, num_workers=12)
 
     def fit(self, ck_file_name=None):
@@ -297,7 +333,6 @@ class DINOSeg(pl.LightningModule):
                               callbacks=callbacks,
                               logger=None)
             trainer.fit(self, train_dataloader=data_sim_train, val_dataloaders=data_sim_val)
-
 
         # Main training
         trainer = Trainer(gpus=1,
