@@ -8,7 +8,7 @@ opencv_python==4.5.5.62
 pandas==1.4.1
 Pillow==9.0.1
 pytorch_lightning==1.5.10
-scikit_learn==1.0.2
 setuptools==59.5.0
+scikit-learn
 torch
 torchvision
