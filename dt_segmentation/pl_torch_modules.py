@@ -46,16 +46,16 @@ def get_transforms():
 def get_augmented_transforms():
     """Transforms with augmentations."""
     t = [
-            A.RandomCrop(360, 360, p=.5),
-            A.RandomCrop(256, 256, p=.25),
-            A.ShiftScaleRotate(shift_limit=0.4, scale_limit=0.4, rotate_limit=30, p=0.5),
-            A.RGBShift(r_shift_limit=10, g_shift_limit=10, b_shift_limit=10, p=0.5),
-            A.RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3, p=0.5),
-            A.HorizontalFlip(p=0.5),
-            A.Resize(480, 480),
-            A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-            ToTensorV2(),
-        ]
+        A.RandomCrop(360, 360, p=.5),
+        A.RandomCrop(256, 256, p=.25),
+        A.ShiftScaleRotate(shift_limit=0.4, scale_limit=0.4, rotate_limit=30, p=0.5),
+        A.RGBShift(r_shift_limit=10, g_shift_limit=10, b_shift_limit=10, p=0.5),
+        A.RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3, p=0.5),
+        A.HorizontalFlip(p=0.5),
+        A.Resize(480, 480),
+        A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        ToTensorV2(),
+    ]
 
     return A.Compose(t)
 
@@ -159,6 +159,7 @@ class DINOSeg(pl.LightningModule):
         self.class_names = class_names
         self.pretrain_on_sim = pretrain_on_sim
         self.augmented = augmented
+        self.transforms = get_transforms()
 
         # First load dino to "cpu"
         dino = get_dino(8, device='cpu')
@@ -209,30 +210,27 @@ class DINOSeg(pl.LightningModule):
         pred = probs.argmax(dim=-1).detach().cpu()
         return {"loss": loss, "pred": pred, "gt": y.squeeze(0), "probs": probs.detach().cpu()}
 
-    def predict(self, x, tensor=False):
-        """Return nd array of class predictions for input.
-        Set tensor=True to return a tensor instead."""
-        prob = self(x.to(self.device))
-        if tensor:
-            return torch.argmax(prob, dim=-1)
-        else:
-            return torch.argmax(prob, dim=-1).cpu().numpy()
+    def predict(self, x):
+        """Run inference on a single image.
 
-    def predict_dl(self, data_loader):
-        """Same as predict, but on a torch data loader."""
-        # Put model on GPU
-        device = self.device
-        self.to('cuda:0' if torch.cuda.is_available() else 'cpu')
+        Parameters
+        ----------
+        x : PIL.Image
+            Image to process.
 
-        # Predict data loader
-        self.eval()
+        Returns
+        -------
+        predictions : ndarray
+            480x480 segmentation of the image.
+
+        """
         with torch.no_grad():
-            result = torch.cat([self.predict(b.to(self.device), tensor=True).cpu() for b, _ in data_loader]).numpy()
+            x = self.transforms(image=np.array(x))['image']
+            prob = self(x.unsqueeze(0).to(self.device))
 
-        # Return model to original device
-        self.to(device)
-
-        return result
+            low_res = torch.argmax(prob, dim=-1).cpu().numpy().reshape((60, 60))
+            pred = np.kron(low_res, np.ones((8, 8))).astype(int)  # Upscale the predictions back to 480x480
+            return pred
 
     def validation_step(self, batch, batch_idx):
         """Compute validation prediction."""

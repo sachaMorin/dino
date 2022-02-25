@@ -6,13 +6,12 @@ import os
 import glob
 import argparse
 
-import torch
 import numpy as np
+import torch
 import imgviz
 from PIL import Image
-import cv2
 
-from dt_segmentation.pl_torch_modules import DINOSeg, get_transforms
+from dt_segmentation.pl_torch_modules import DINOSeg
 from dt_segmentation.dt_utils import parse_class_names
 import warnings
 
@@ -27,9 +26,6 @@ def inference(checkpoint_path, image_dir, target_dir, labels_path):
         if not os.path.exists(target_dir):
             os.makedirs(target_dir)
 
-        # Get transforms
-        transforms = get_transforms()
-
         # Get class names and length
         class_names, _ = parse_class_names(labels_path)
 
@@ -38,24 +34,20 @@ def inference(checkpoint_path, image_dir, target_dir, labels_path):
                 img = Image.open(file)
                 x = img.convert('RGB')
 
-            x_transformed = transforms(x)
-            pred = mlp_dino.predict(x_transformed.unsqueeze(0)).reshape((60, 60))
-
-            # Resize the original image and the predictions to 480 x 480
-            img = cv2.resize(np.array(x), (480, 480))
-            pred = np.kron(pred, np.ones((8, 8))).astype(int)  # Upscale the predictions back to 480x480
-
+            # Ge predictions
+            pred = mlp_dino.predict(x)
 
             # Save image
             viz = imgviz.label2rgb(
                 pred,
-                imgviz.rgb2gray(img),
+                imgviz.rgb2gray(np.array(x.resize((480, 480)))),
                 font_size=15,
                 label_names=class_names,
                 loc="rb",
             )
             f = filename.split(os.sep)[-1]
             imgviz.io.imsave(os.path.join(target_dir, f), viz)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -64,7 +56,8 @@ if __name__ == '__main__':
     parser.add_argument("checkpoint_path", help="Trained PL checkpoint")
     parser.add_argument("image_dir", help="Images to run inference on")
     parser.add_argument("target_dir", help="Where to save predictions")
-    parser.add_argument("--labels_path", help="Txt file with class labels.", required=False, default=os.path.join("data", "labels.txt"))
+    parser.add_argument("--labels_path", help="Txt file with class labels.", required=False,
+                        default=os.path.join("data", "labels.txt"))
     args = parser.parse_args()
 
     inference(**vars(args))
