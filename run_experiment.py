@@ -17,8 +17,8 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
 
-def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, patience, n_blocks, finetune, seed, pretrain_on_sim=False,
-                   ck_file_name=None, comet_tag=None):
+def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, patience, n_blocks, finetune, seed,
+                   augmentations=False, pretrain_on_sim=False, ck_file_name=None, comet_tag=None):
     """Fit coarse segmentation model on Duckietown data. We use DINO as the backbone and output a prediction for
     every 8x8 token in the image.
 
@@ -41,6 +41,10 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, pat
     finetune : bool,
         Initial training is done on the frozen backbone. If this is set to true, we then unfreeze the
         backbone and refit the data.
+    pretrain_on_sim : bool,
+        Pretrain on the larger simulation dataset before training on real data.
+    augmentations : bool,
+        Train on augmentations.
     seed : int,
         Random seed.
     ck_file_name : str, default:None
@@ -70,7 +74,8 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, pat
     mlp_frozen = DINOSeg(head='mlp', data_path=data_path, pretrain_on_sim=pretrain_on_sim,
                          write_path=write_path, n_classes=len(class_names), class_names=class_names,
                          freeze_backbone=True, optimizer=Adam, lr=learning_rate, batch_size=batch_size,
-                         n_blocks=n_blocks, max_epochs=epochs, patience=patience, comet_logger=comet_logger)
+                         n_blocks=n_blocks, max_epochs=epochs, patience=patience, comet_logger=comet_logger,
+                         augmented=augmentations)
 
     if ck_file_name is None:
         # Generate a checkpoint file name
@@ -132,6 +137,9 @@ if __name__ == '__main__':
     parser.add_argument("--pretrain_on_sim", help="Pretrain on simulation data.", required=False, action='store_true')
     parser.add_argument("--finetune",
                         help="Finetune DINO backbone after an initial training phase with a frozen backbone",
+                        required=False, action='store_true')
+    parser.add_argument("--augmentations",
+                        help="Augment data during training.",
                         required=False, action='store_true')
     parser.add_argument("--comet_tag",
                         help=" If a comet tag is provided we log the experiments to comet with the provided tag.",
