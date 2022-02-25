@@ -1,4 +1,5 @@
 albumentations==1.1.0
+comet_ml==3.26.1
 imgviz==1.4.1
 labelme==4.6.0
 matplotlib==3.2.2
