@@ -326,7 +326,7 @@ class DINOSeg(pl.LightningModule):
             print('Pretraining on simulation data...')
             # Pretrain on sim, but don't log
             data_sim_train = self.train_dataloader(sim=True)
-            data_sim_val = self.val_dataloader(sim=True)
+            data_sim_val = self.val_dataloader(sim=False)
             trainer = Trainer(gpus=1,
                               max_epochs=self.max_epochs,
                               check_val_every_n_epoch=1,
@@ -335,6 +335,19 @@ class DINOSeg(pl.LightningModule):
             trainer.fit(self, train_dataloader=data_sim_train, val_dataloaders=data_sim_val)
 
         # Main training
+        # PL callbacks
+        callbacks = [
+            ModelCheckpoint(
+                monitor='val_acc',
+                mode='max',
+                dirpath=self.write_path,
+                filename=ck_file_name,
+                auto_insert_metric_name=False),
+            # EarlyStopping(
+            #     monitor="val_acc",
+            #     mode='max',
+            #     patience=self.patience)
+        ]
         trainer = Trainer(gpus=1,
                           max_epochs=self.max_epochs,
                           check_val_every_n_epoch=1,
