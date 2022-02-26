@@ -29,24 +29,25 @@ def inference(checkpoint_path, image_dir, target_dir, labels_path):
         # Get class names and length
         class_names, _ = parse_class_names(labels_path)
 
-        for filename in glob.glob(os.path.join(image_dir, "*.jpg")):
-            with open(filename, 'rb') as file:
-                img = Image.open(file)
-                x = img.convert('RGB')
+        for ext in ['jpg', 'png']:
+            for filename in glob.glob(os.path.join(image_dir, f"*.{ext}")):
+                with open(filename, 'rb') as file:
+                    img = Image.open(file)
+                    x = img.convert('RGB')
 
-            # Ge predictions
-            pred = mlp_dino.predict(x)
+                # Ge predictions
+                pred = mlp_dino.predict(x)
 
-            # Save image
-            viz = imgviz.label2rgb(
-                pred,
-                imgviz.rgb2gray(np.array(x.resize((480, 480)))),
-                font_size=15,
-                label_names=class_names,
-                loc="rb",
-            )
-            f = filename.split(os.sep)[-1]
-            imgviz.io.imsave(os.path.join(target_dir, f), viz)
+                # Save image
+                viz = imgviz.label2rgb(
+                    pred,
+                    imgviz.rgb2gray(np.array(x.resize((480, 480)))),
+                    font_size=15,
+                    label_names=class_names,
+                    loc="rb",
+                )
+                f = filename.split(os.sep)[-1]
+                imgviz.io.imsave(os.path.join(target_dir, f), viz)
 
 
 if __name__ == '__main__':
@@ -57,7 +58,7 @@ if __name__ == '__main__':
     parser.add_argument("image_dir", help="Images to run inference on")
     parser.add_argument("target_dir", help="Where to save predictions")
     parser.add_argument("--labels_path", help="Txt file with class labels.", required=False,
-                        default=os.path.join("../data", "labels.txt"))
+                        default=os.path.join("data", "labels.txt"))
     args = parser.parse_args()
 
     inference(**vars(args))
