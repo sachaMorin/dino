@@ -92,16 +92,17 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, n_b
                 project_name="duck"
             )
             comet_logger.experiment.add_tag(comet_tag)
+            comet_logger.experiment.log_parameter("is_finetuned", True)
         else:
             comet_logger = None
 
         print("\n Finetuning the previous model...")
         # MLP Head + Fine tune backbone
         # Only finetune with fewer than 5 blocks, might otherwise run out of GPU RAM
-        mlp_dino = DINOSeg.load_from_checkpoint(os.path.join(write_path, ck_file_name + '.ckpt'))
+        mlp_dino = DINOSeg.load_from_checkpoint(mlp_frozen.best_ck)
         mlp_dino.freeze_backbone = False
         mlp_dino.optimizer = AdamW
-        mlp_dino.lr /= 10  # Lower the learning rate for fine-tuning
+        mlp_dino.lr /= 100  # Lower the learning rate for fine-tuning
 
         # Add new comet logger
         mlp_dino.comet_logger = comet_logger

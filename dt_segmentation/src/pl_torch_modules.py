@@ -235,7 +235,8 @@ class DINOSeg(pl.LightningModule):
         """Compute validation prediction."""
         x, y = batch
         probs = self(x).detach().cpu()
-        pred = probs.argmax(dim=-1)
+        pred = probs.argmax(dim=-1).detach().cpu()
+        y = y.reshape((-1,)).long()
         return {"pred": pred, "gt": y.squeeze(0), "probs": probs}
 
     def validation_epoch_end(self, outputs, prefix='val'):
@@ -282,16 +283,16 @@ class DINOSeg(pl.LightningModule):
         # We use a sampler to make sure we have 100 images per epoch, regardless of the dataset we are using
         sampler = torch.utils.data.WeightedRandomSampler(torch.ones((len(data),)), num_samples=200, replacement=True)
 
-        return DataLoader(data, batch_size=self.batch_size, num_workers=12, sampler=sampler)
+        return DataLoader(data, batch_size=self.batch_size, num_workers=1, sampler=sampler)
 
     def val_dataloader(self, sim=False):
         path = self.val_path_sim if sim else self.val_path
         return DataLoader(DuckieSegDataset(path, augmented=False), batch_size=self.batch_size,
-                          shuffle=False, num_workers=12)
+                          shuffle=False, num_workers=1)
 
     def test_dataloader(self):
         return DataLoader(DuckieSegDataset(self.test_path, augmented=False), batch_size=self.batch_size,
-                          shuffle=False, num_workers=12)
+                          shuffle=False, num_workers=1)
 
     def fit(self, ck_file_name=None):
         if self.freeze_backbone:
@@ -355,10 +356,12 @@ class DINOSeg(pl.LightningModule):
         # Also test!
         trainer.test(self)
 
+        # Best checkpoint path
+        self.best_ck = callbacks[0].best_model_path
+
         # If we have a logger, log the checkpoint
         if self.comet_logger is not None:
-            best = callbacks[0].best_model_path
-            self.comet_logger.experiment.log_asset(best)
+            self.comet_logger.experiment.log_asset(self.best_ck)
 
     def freeze_bb(self):
         for p in self.dino.parameters():
