@@ -31,10 +31,10 @@ from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from .dt_utils import get_dino
 
 
-def get_transforms():
+def get_transforms(resolution=480):
     """Return basic transforms (no augmentations). Use this for testing and inference."""
     t = [
-        A.Resize(480, 480),
+        A.Resize(resolution, resolution),
         A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ToTensorV2(),
     ]
@@ -158,7 +158,11 @@ class DINOSeg(pl.LightningModule):
         self.class_names = class_names
         self.pretrain_on_sim = pretrain_on_sim
         self.augmented = augmented
-        self.transforms = get_transforms()
+
+        # Vanilla transforms. Handy for inference
+        # You can change resolution with the set_resolution method
+        self.resolution = 480
+        self.transforms = get_transforms(self.resolution)
 
         # First load dino to "cpu"
         dino = get_dino(8, device='cpu')
@@ -209,6 +213,12 @@ class DINOSeg(pl.LightningModule):
         pred = probs.argmax(dim=-1).detach().cpu()
         return {"loss": loss, "pred": pred, "gt": y.squeeze(0), "probs": probs.detach().cpu()}
 
+    def set_resolution(self, resolution=480):
+        if resolution % 8 != 0:
+            raise ValueError('Resolution should be a multiple of 8.')
+        self.transforms = get_transforms(resolution)
+        self.resolution = resolution
+
     def predict(self, x):
         """Run inference on a single image.
 
@@ -227,8 +237,12 @@ class DINOSeg(pl.LightningModule):
             x = self.transforms(image=np.array(x))['image']
             prob = self(x.unsqueeze(0).to(self.device))
 
-            low_res = torch.argmax(prob, dim=-1).cpu().numpy().reshape((60, 60))
-            pred = np.kron(low_res, np.ones((8, 8))).astype(int)  # Upscale the predictions back to 480x480
+            output_size = self.resolution // 8
+            low_res = torch.argmax(prob, dim=-1).cpu().numpy().reshape((output_size, output_size))
+
+            high_res_patch_size = 480 // output_size
+            pred = np.kron(low_res, np.ones((high_res_patch_size, high_res_patch_size), dtype=int))
+
             return pred
 
     def validation_step(self, batch, batch_idx):
