@@ -45,13 +45,12 @@ def get_transforms():
 def get_augmented_transforms():
     """Transforms with augmentations."""
     t = [
-        A.RandomCrop(360, 360, p=.5),
-        A.RandomCrop(256, 256, p=.25),
-        A.ShiftScaleRotate(shift_limit=0.4, scale_limit=0.4, rotate_limit=30, p=0.5),
-        A.RGBShift(r_shift_limit=10, g_shift_limit=10, b_shift_limit=10, p=0.5),
-        A.RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3, p=0.5),
-        A.HorizontalFlip(p=0.5),
         A.Resize(480, 480),
+        A.RandomResizedCrop(480, 480, scale=(.25, 1), ratio=(.9, 1.1), p=.75),
+        A.ShiftScaleRotate(shift_limit=0.4, scale_limit=0.1, rotate_limit=15, p=0.25),
+        A.HorizontalFlip(p=0.5),
+        A.ColorJitter(brightness=0.5, p=.5),
+        A.GaussianBlur(blur_limit=(3, 41), p=.25),
         A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ToTensorV2(),
     ]
@@ -92,11 +91,12 @@ class DuckieSegDataset(Dataset):
         transformed = self.t(image=x, mask=y)
 
         image, mask = transformed['image'], transformed['mask']
-
-        # Debug
+        #
         # if self.augmented:
         #     plt.imshow(image.permute((1, 2, 0)))
         #     plt.show()
+        #     exit()
+
 
         # Resize the mask to match the Vision transformer number of tokens
         mask = self.mask_resize(mask.unsqueeze(0)).flatten()
@@ -280,19 +280,19 @@ class DINOSeg(pl.LightningModule):
         path = self.train_path_sim if sim else self.train_path
         data = DuckieSegDataset(path, augmented=self.augmented)
 
-        # We use a sampler to make sure we have 100 images per epoch, regardless of the dataset we are using
-        sampler = torch.utils.data.WeightedRandomSampler(torch.ones((len(data),)), num_samples=200, replacement=True)
+        # We use a sampler to make sure we have 1000 images per epoch, regardless of the dataset we are using
+        sampler = torch.utils.data.WeightedRandomSampler(torch.ones((len(data),)), num_samples=1000, replacement=True)
 
-        return DataLoader(data, batch_size=self.batch_size, num_workers=1, sampler=sampler)
+        return DataLoader(data, batch_size=self.batch_size, num_workers=24, sampler=sampler)
 
     def val_dataloader(self, sim=False):
         path = self.val_path_sim if sim else self.val_path
         return DataLoader(DuckieSegDataset(path, augmented=False), batch_size=self.batch_size,
-                          shuffle=False, num_workers=1)
+                          shuffle=False, num_workers=3)
 
     def test_dataloader(self):
         return DataLoader(DuckieSegDataset(self.test_path, augmented=False), batch_size=self.batch_size,
-                          shuffle=False, num_workers=1)
+                          shuffle=False, num_workers=3)
 
     def fit(self, ck_file_name=None):
         if self.freeze_backbone:
@@ -327,7 +327,7 @@ class DINOSeg(pl.LightningModule):
             data_sim_val = self.val_dataloader(sim=False)
             trainer = Trainer(gpus=1,
                               max_epochs=self.max_epochs,
-                              check_val_every_n_epoch=5,
+                              check_val_every_n_epoch=1,
                               callbacks=callbacks,
                               logger=None)
             trainer.fit(self, train_dataloader=data_sim_train, val_dataloaders=data_sim_val)
@@ -348,7 +348,7 @@ class DINOSeg(pl.LightningModule):
         ]
         trainer = Trainer(gpus=1,
                           max_epochs=self.max_epochs,
-                          check_val_every_n_epoch=5,
+                          check_val_every_n_epoch=1,
                           callbacks=callbacks,
                           logger=self.comet_logger)
         trainer.fit(self)
