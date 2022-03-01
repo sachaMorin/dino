@@ -16,12 +16,11 @@ from src.dt_utils import parse_class_names
 import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning)
-torch.cuda.set_per_process_memory_fraction(1.)
 
 
-def inference(checkpoint_path, image_dir, target_dir, labels_path, resolution=480):
+def inference(checkpoint_path, image_dir, target_dir, labels_path, resolution=480, cpu=False):
     """Use a trained PL checkpoint to run inference on all images in image_dir."""
-    mlp_dino = DINOSeg.load_from_checkpoint(checkpoint_path).to('cuda:0' if torch.cuda.is_available() else 'cpu')
+    mlp_dino = DINOSeg.load_from_checkpoint(checkpoint_path).to('cuda:0' if torch.cuda.is_available() and not cpu else 'cpu')
 
     # This only affects the inference resolution. The output is still 480x480
     mlp_dino.set_resolution(resolution)
@@ -48,7 +47,7 @@ def inference(checkpoint_path, image_dir, target_dir, labels_path, resolution=48
                     pred,
                     imgviz.rgb2gray(np.array(x.resize((480, 480)))),
                     font_size=15,
-                    label_names=class_names,
+                    # label_names=class_names,
                     loc="rb",
                 )
                 f = filename.split(os.sep)[-1]
@@ -66,6 +65,9 @@ if __name__ == '__main__':
                         default=os.path.join("data", "labels.txt"))
     parser.add_argument("--resolution", help="Prediction resolutions.", required=False,
                         default=480, type=int)
+    parser.add_argument("--cpu",
+                        help="Force usage of cpu.",
+                        required=False, action='store_true')
     args = parser.parse_args()
 
     inference(**vars(args))
