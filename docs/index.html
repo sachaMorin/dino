@@ -1,0 +1,175 @@
+
+<!DOCTYPE html>
+<html>
+
+<head lang="en">
+    <meta charset="UTF-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+
+    <title>Duck DuckFormer</title>
+
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <meta property="og:image" content="https://github.com/sachaMorin/dino/docs/img/predictions.jpg">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1296">
+    <meta property="og:image:height" content="840">
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://sachaMorin.github.io/dino"/>
+    <meta property="og:title" content="Duck Duck Former" />
+    <meta property="og:description" content="In this work, we consider the problem of learning a perception model for monocular robot navigation using few annotated images. Using a Vision Transformer (ViT) pretrained with a label-free self-supervised method, we successfully train a coarse image segmentation model for the Duckietown environment using 70 training images. Our model performs coarse image segmentation at the 8x8 patch level, and the inference resolution can be adjusted to balance prediction granularity and real-time perception constraints.  We study how best to adapt a ViT to our task and environment, and find that some lightweight architectures can yield good single-image segmentations at a usable frame rate, even on CPU. The resulting perception model is used as the backbone for a simple yet robust visual servoing agent, which we successfully deploy on a differential drive mobile robot to perform two tasks : lane following and obstacle avoidance." />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Duck Duck Former" />
+    <meta name="twitter:description" content="In this work, we consider the problem of learning a perception model for monocular robot navigation using few annotated images. Using a Vision Transformer (ViT) pretrained with a label-free self-supervised method, we successfully train a coarse image segmentation model for the Duckietown environment using 70 training images. Our model performs coarse image segmentation at the 8x8 patch level, and the inference resolution can be adjusted to balance prediction granularity and real-time perception constraints.  We study how best to adapt a ViT to our task and environment, and find that some lightweight architectures can yield good single-image segmentations at a usable frame rate, even on CPU. The resulting perception model is used as the backbone for a simple yet robust visual servoing agent, which we successfully deploy on a differential drive mobile robot to perform two tasks : lane following and obstacle avoidance." />
+    <meta name="twitter:image" content="https://github.com/sachaMorin/dino/docs/img/predictions.jpg" />
+
+
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.8.0/codemirror.min.css">
+    <link rel="stylesheet" href="css/app.css">
+
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.8.0/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/1.5.3/clipboard.min.js"></script>
+    
+    <script src="js/app.js"></script>
+</head>
+
+<body>
+    <div class="container" id="main">
+        <div class="row">
+            <h2 class="col-md-12 text-center">
+                <b>Duck Duck Former</b>: Transformers <br> More transformers</br>
+                <small>
+                </small>
+            </h2>
+        </div>
+        <div class="row">
+            <div class="col-md-12 text-center">
+                <ul class="list-inline">
+                    <li>
+                        <a href="https://mikes96.github.io/">
+                          Miguel Saavedra-Ruiz
+                        </a>
+                        </br>Mila - Quebec AI Institute, DIRO
+                    </li>
+                    <li>
+                        <a href="">
+                            Sacha Morin
+                        </a>
+                        </br>Mila - Quebec AI Institute, DIRO
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+
+        <div class="row">
+                <div class="col-md-4 col-md-offset-4 text-center">
+                    <ul class="nav nav-pills nav-justified">
+                        <li>
+                            <a href="https://arxiv.org/abs/2111.12077">
+<!--                                TODO change this-->
+                            <image src="img/360_paper_image.jpg" height="60px">
+                                <h4><strong>Paper</strong></h4>
+                            </a>
+                        </li>
+<!--                        <li>-->
+<!--                            <a href="https://youtu.be/zBSH-k9GbV4">-->
+<!--                            <image src="img/youtube_icon.png" height="60px">-->
+<!--                                <h4><strong>Video</strong></h4>-->
+<!--                            </a>-->
+<!--                        </li>-->
+                        <!-- <li>
+                            <a href="TODO">
+                            <image src="img/github.png" height="60px">
+                                <h4><strong>Code</strong></h4>
+                            </a>
+                        </li> -->
+                    </ul>
+                </div>
+        </div>
+
+
+
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <video id="v0" width="100%" autoplay loop muted controls>
+                  <source src="img/segmentation.mp4" type="video/mp4" />
+                </video>
+						</div>
+            <div class="col-md-8 col-md-offset-2">
+							<p class="text-center">
+							Visual navigation with DINO
+							</p>
+						</div>
+        </div>
+
+
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    Abstract
+                </h3>
+                <p class="text-justify">
+In this work, we consider the problem of learning a perception model for monocular robot navigation using few annotated images. Using a Vision Transformer (ViT) pretrained with a label-free self-supervised method, we successfully train a coarse image segmentation model for the Duckietown environment using 70 training images. Our model performs coarse image segmentation at the 8x8 patch level, and the inference resolution can be adjusted to balance prediction granularity and real-time perception constraints.  We study how best to adapt a ViT to our task and environment, and find that some lightweight architectures can yield good single-image segmentations at a usable frame rate, even on CPU. The resulting perception model is used as the backbone for a simple yet robust visual servoing agent, which we successfully deploy on a differential drive mobile robot to perform two tasks : lane following and obstacle avoidance.
+                </p>
+            </div>
+        </div>
+
+
+<!--        Add Youtube video???-->
+<!--        <div class="row">-->
+<!--            <div class="col-md-8 col-md-offset-2">-->
+<!--                <h3>-->
+<!--                    Video-->
+<!--                </h3>-->
+<!--                <div class="text-center">-->
+<!--                    <div style="position:relative;padding-top:56.25%;">-->
+<!--                        <iframe src="https://youtube.com/embed/zBSH-k9GbV4" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+
+            
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    Citation
+                </h3>
+                <div class="form-group col-md-10 col-md-offset-1">
+                    <textarea id="bibtex" class="form-control" readonly>
+@article{barron2021mipnerf360,
+    title={ours},
+    author={we?},
+    journal={what?},
+    year={2222}
+}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    Acknowledgements
+                </h3>
+                <p class="text-justify">
+                Thanks to ...
+                    <br>
+                The website template was borrowed from <a href="http://mgharbi.com/">Michaël Gharbi</a>.
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
