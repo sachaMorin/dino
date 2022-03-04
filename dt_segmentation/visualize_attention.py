@@ -2,7 +2,7 @@
 """Script to compute attention of a given image.
 
 Save the visualizations in target_dir.
-dt_segmentation/visualize_attention.py results/3_mlp_frozen_1234_finetuned.ckpt data/dt_real_voc_test/JPEGImages/left0621.jpg attn --pretrained False
+dt_segmentation/visualize_attention.py results/3_mlp_frozen_1234_finetuned.ckpt data/dt_real_voc_test/JPEGImages/left0621.jpg attn
 """
 import os
 import argparse
@@ -21,14 +21,13 @@ warnings.filterwarnings("ignore", category=UserWarning)
 torch.cuda.set_per_process_memory_fraction(1.)
 
 
-def vis_mask(checkpoint_path, filename, target_dir, resolution=480, pretrained=False):
+def vis_mask(checkpoint_path, filename, target_dir, resolution=480):
     """Use a trained PL checkpoint to compute attention mask on given image."""
 
     patch_size = 8
-    if pretrained:
-        mlp_dino = DINOSeg(data_path='dummy', write_path='dummy', n_blocks=3)
-    else:
-        mlp_dino = DINOSeg.load_from_checkpoint(checkpoint_path).to('cuda:0' if torch.cuda.is_available() else 'cpu')
+
+    # mlp_dino = DINOSeg(data_path='dummy', write_path='dummy', n_blocks=3)
+    mlp_dino = DINOSeg.load_from_checkpoint(checkpoint_path).to('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     # This only affects the inference resolution. The output is still 480x480
     mlp_dino.set_resolution(resolution)
@@ -57,7 +56,7 @@ def vis_mask(checkpoint_path, filename, target_dir, resolution=480, pretrained=F
         torchvision.utils.save_image(torchvision.utils.make_grid(x, normalize=True, scale_each=True),
                                      os.path.join(target_dir, 'img.png'))
         for j in range(nh):
-            fname = os.path.join(target_dir, "attn-head" + str(j) + ".png")
+            fname = os.path.join(target_dir, "attn-head-dino" + str(j) + ".png")
             plt.imsave(fname=fname, arr=attentions[j], format='png')
             print(f"{fname} saved.")
 
@@ -71,8 +70,6 @@ if __name__ == '__main__':
     parser.add_argument("target_dir", help="Where to save attentions")
     parser.add_argument("--resolution", help="Prediction resolutions.", required=False,
                         default=480, type=int)
-    parser.add_argument("--pretrained", help="Use original weights.", required=False,
-                        default=False, type=bool)
     args = parser.parse_args()
 
     vis_mask(**vars(args))
