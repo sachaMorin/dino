@@ -16,7 +16,7 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
 
-def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, n_blocks, finetune,
+def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, n_blocks, finetune, unfreeze=False, random_init=False,
                    augmentations=False, pretrain_on_sim=False, ck_file_name=None, comet_tag=None, random_state=42, patience=10):
     """Fit coarse segmentation model on Duckietown data. We use DINO as the backbone and output a prediction for
     every 8x8 token in the image.
@@ -40,8 +40,12 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, n_b
     finetune : bool,
         Initial training is done on the frozen backbone. If this is set to true, we then unfreeze the
         backbone and refit the data.
+    freeze : bool,
+        Train with a frozen backbone.
     pretrain_on_sim : bool,
         Pretrain on the larger simulation dataset before training on real data.
+    random_init : bool,
+        Use random initialization instead of DINO pretrained weights.
     augmentations : bool,
         Train on augmentations.
     random_state : int,
@@ -69,18 +73,20 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, n_b
     # Get class names and length
     class_names, _ = parse_class_names(os.path.join(data_path, 'labels.txt'))
 
+    optimizer = AdamW if unfreeze else Adam
+
     # MLP Head
-    mlp_frozen = DINOSeg(head='mlp', data_path=data_path, pretrain_on_sim=pretrain_on_sim,
+    dino_seg = DINOSeg(head='mlp', data_path=data_path, pretrain_on_sim=pretrain_on_sim,
                          write_path=write_path, n_classes=len(class_names), class_names=class_names,
-                         freeze_backbone=True, optimizer=Adam, lr=learning_rate, batch_size=batch_size,
+                         freeze_backbone=not unfreeze, optimizer=optimizer, lr=learning_rate, batch_size=batch_size,
                          n_blocks=n_blocks, max_epochs=epochs, patience=patience, comet_logger=comet_logger,
-                         augmented=augmentations)
+                         augmented=augmentations, random_init=random_init)
 
     if ck_file_name is None:
         # Generate a checkpoint file name
-        ck_file_name = str(n_blocks) + '_' + 'mlp_frozen_' + str(random_state)
+        ck_file_name = str(n_blocks) + '_' + 'mlp_' + str(random_state)
 
-    mlp_frozen.fit(ck_file_name)
+    dino_seg.fit(ck_file_name)
 
     # Fine tune
     # This is logged as a separate comet experiment
@@ -99,15 +105,15 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, n_b
         print("\n Finetuning the previous model...")
         # MLP Head + Fine tune backbone
         # Only finetune with fewer than 5 blocks, might otherwise run out of GPU RAM
-        mlp_dino = DINOSeg.load_from_checkpoint(mlp_frozen.best_ck)
-        mlp_dino.freeze_backbone = False
-        mlp_dino.optimizer = AdamW
-        mlp_dino.lr /= 100  # Lower the learning rate for fine-tuning
+        dino_seg = DINOSeg.load_from_checkpoint(dino_seg.best_ck)
+        dino_seg.freeze_backbone = False
+        dino_seg.optimizer = AdamW
+        dino_seg.lr /= 100  # Lower the learning rate for fine-tuning
 
         # Add new comet logger
-        mlp_dino.comet_logger = comet_logger
+        dino_seg.comet_logger = comet_logger
         ck_file_name = ck_file_name + '_finetuned'
-        mlp_dino.fit(ck_file_name)
+        dino_seg.fit(ck_file_name)
 
 
 if __name__ == '__main__':
@@ -116,7 +122,7 @@ if __name__ == '__main__':
     )
     parser.add_argument("--data_path", '-d', help="Data folder", required=False, default="data")
     parser.add_argument("--write_path", '-w', help="Where to write results", required=False, default="results")
-    parser.add_argument("--batch_size", '-b', help="Batch size", required=False, default=2, type=int)
+    parser.add_argument("--batch_size", '-b', help="Batch size. Number of 480p images. 1 image = 3,600 image patches.", required=False, default=1, type=int)
     parser.add_argument("--epochs", '-e', help="Max number of training epochs", required=False, default=200, type=int)
     parser.add_argument("--learning_rate", '-lr', help="Learning rate", required=False, default=1e-3, type=float)
     parser.add_argument("--patience", '-p', help="Patience for early stopping", required=False, default=200, type=int)
@@ -124,6 +130,12 @@ if __name__ == '__main__':
     parser.add_argument("--pretrain_on_sim", help="Pretrain on simulation data.", required=False, action='store_true')
     parser.add_argument("--finetune",
                         help="Finetune DINO backbone after an initial training phase with a frozen backbone",
+                        required=False, action='store_true')
+    parser.add_argument("--unfreeze",
+                        help="Unfreeze DINO backbone during training. If you want to first train with a frozen backbone and then unfrezze, use the --finetune flag.",
+                        required=False, action='store_true')
+    parser.add_argument("--random_init",
+                        help="Reinitialize the weights instead of using pretrained DINO weidghts.",
                         required=False, action='store_true')
     parser.add_argument("--augmentations",
                         help="Augment data during training.",

@@ -61,16 +61,18 @@ def get_augmented_transforms():
 class DuckieSegDataset(Dataset):
     """Wrapper to get the image/label dataset of duckietown."""
 
-    def __init__(self, path, augmented=False):
+    def __init__(self, path, augmented=False, resolution=480):
         self.path = path
         self.files = glob.glob(os.path.join(path, 'JPEGImages', "*.jpg"))
         self.len = len(self.files)
-        self.mask_resize = pth_transforms.Resize(size=(60, 60), interpolation=pth_transforms.InterpolationMode.NEAREST)
         self.augmented = augmented
+        self.resolution = resolution
+        mask_size = self.resolution //8
+        self.mask_resize = pth_transforms.Resize(size=(mask_size, mask_size), interpolation=pth_transforms.InterpolationMode.NEAREST)
         if augmented:
             self.t = get_augmented_transforms()
         else:
-            self.t = get_transforms()
+            self.t = get_transforms(self.resolution)
 
     def __len__(self):
         return self.len
@@ -142,7 +144,7 @@ class DINOSeg(pl.LightningModule):
 
     def __init__(self, data_path, write_path, class_names=None, head='linear', n_blocks=1,
                  batch_size=1, lr=1e-6, optimizer=AdamW, freeze_backbone=True, max_epochs=200, patience=10,
-                 grayscale=False, n_classes=7, pretrain_on_sim=False, comet_logger=None, augmented=True):
+                 grayscale=False, n_classes=7, pretrain_on_sim=False, comet_logger=None, augmented=True, random_init=False):
         super().__init__()
         self.n_blocks = n_blocks
         self.head = head
@@ -158,6 +160,7 @@ class DINOSeg(pl.LightningModule):
         self.class_names = class_names
         self.pretrain_on_sim = pretrain_on_sim
         self.augmented = augmented
+        self.random_init = random_init
 
         # Vanilla transforms. Handy for inference
         # You can change resolution with the set_resolution method
@@ -170,6 +173,10 @@ class DINOSeg(pl.LightningModule):
         # Only keep n_blocks
         dino.blocks = dino.blocks[:n_blocks]
         self.dino = dino
+
+        # Random init for the backbone
+        if random_init:
+            self.dino.apply(self.dino._init_weights)
 
         # Load segmentation head
         if head == 'linear':
