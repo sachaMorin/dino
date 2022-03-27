@@ -16,7 +16,7 @@ pip install --upgrade git+https://github.com/sachaMorin/dino.git
 ``` 
 
 ## Prediction
-We provide two trained checkpoints in ```models```. You can run inference like so:
+After downloading a [checkpoint](), you can run inference like so:
 ```python
 import os
 
@@ -25,7 +25,7 @@ from PIL import Image
 
 from dt_segmentation import DINOSeg
 
-model_path = os.path.join("models", "3_block_finetuned.ckpt")
+model_path = os.path.join("3_block_finetuned.ckpt")
 frame_path = os.path.join("docs", "img", "frame.jpg")
 
 mlp_dino = DINOSeg.load_from_checkpoint(model_path).to('cuda:0' if torch.cuda.is_available() else 'cpu')
