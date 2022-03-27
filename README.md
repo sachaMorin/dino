@@ -6,7 +6,7 @@ Model code for [Monocular Robot Navigation with Self-Supervised Pretrained Visio
 
 This is the segmentation and Vision Transformer code. For the Duckietown agent, have a look at [this repository](https://github.com/MikeS96/object-detection/tree/daffy).
 
-Data and trained checkpoints can be found [here]().
+Data and trained checkpoints can be found [here](https://drive.google.com/drive/folders/1PMjqaHt2jl617DyWONFK5fJBOrUukU6t?usp=sharing).
 
 
 ## Install
@@ -16,7 +16,7 @@ pip install --upgrade git+https://github.com/sachaMorin/dino.git
 ``` 
 
 ## Prediction
-After downloading a [checkpoint](www), you can run inference like so:
+After downloading a [checkpoint](https://drive.google.com/drive/folders/1PMjqaHt2jl617DyWONFK5fJBOrUukU6t?usp=sharing), you can run inference like so:
 ```python
 import os
 
@@ -62,7 +62,7 @@ plt.show()
 ```
 
 ## Training
-After downloading the [data](), you can use ```dt_segmentation/run_experiment.py``` to train new models:
+After downloading the [data](https://drive.google.com/drive/folders/1PMjqaHt2jl617DyWONFK5fJBOrUukU6t?usp=sharing), you can use ```dt_segmentation/run_experiment.py``` to train new models:
 ```bash
 python3 run_experiment.py --data_path data --write_path results --n_blocks 1 --batch_size 1 --epochs 5 --augmentations --finetune
 ```
