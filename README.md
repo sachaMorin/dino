@@ -16,7 +16,7 @@ pip install --upgrade git+https://github.com/sachaMorin/dino.git
 ``` 
 
 ## Prediction
-After downloading a [checkpoint](), you can run inference like so:
+After downloading a [checkpoint](www), you can run inference like so:
 ```python
 import os
 
