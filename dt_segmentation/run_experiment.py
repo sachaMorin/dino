@@ -125,7 +125,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", '-b', help="Batch size. Number of 480p images. 1 image = 3,600 image patches.", required=False, default=1, type=int)
     parser.add_argument("--epochs", '-e', help="Max number of training epochs", required=False, default=200, type=int)
     parser.add_argument("--learning_rate", '-lr', help="Learning rate", required=False, default=1e-3, type=float)
-    parser.add_argument("--patience", '-p', help="Patience for early stopping", required=False, default=200, type=int)
+    parser.add_argument("--patience", '-p', help="Patience for early stopping (Not implemented).", required=False, default=200, type=int)
     parser.add_argument("--n_blocks", help="Number of DINO blocks to use", required=False, default=1, type=int)
     parser.add_argument("--pretrain_on_sim", help="Pretrain on simulation data.", required=False, action='store_true')
     parser.add_argument("--finetune",
