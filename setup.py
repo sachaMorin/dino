@@ -1,9 +1,9 @@
 import os
-from setuptools import setup
+from setuptools import setup, find_packages
 
 # :==> Fill in your project data here
 version = '0.0.1'
-library_name = 'dt-dino'
+library_name = 'dt_segmentation'
 library_webpage = 'https://github.com/sachaMorin/dino'
 maintainer = 'Miguel Saavedra'
 maintainer_email = 'miguel.angel.saavedra.ruiz@umontreal,ca'
@@ -32,7 +32,7 @@ setup(name=library_name,
       author_email=maintainer_email,
       url=library_webpage,
       install_requires=dependencies,
-      packages=['dt_segmentation'],
+      packages=find_packages(),
       long_description=description,
       version=version,
       include_package_data=True)

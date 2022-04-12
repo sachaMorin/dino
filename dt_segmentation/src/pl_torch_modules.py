@@ -12,7 +12,6 @@ import os
 import glob
 from sklearn.metrics import balanced_accuracy_score, jaccard_score, f1_score
 from PIL import Image
-import matplotlib.pyplot as plt
 
 from torch import nn
 from torch.optim import Adam, AdamW, SGD
