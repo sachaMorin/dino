@@ -185,11 +185,12 @@ class DINOSeg(pl.LightningModule):
             # Shallow CNN. Rough benchmark for ViT 1-block
             dino = get_dino_cnn(device='cpu')
 
-            # Remove the last activation in layer 2
-            dino.layer2[3].relu = nn.Identity()
-
             # Only keep the first layers
             dino = nn.Sequential(dino.conv1, dino.bn1, dino.relu, dino.maxpool, dino.layer1, dino.layer2)
+
+            # Remove the last activation
+            dino[-1][-1].relu = nn.Identity()
+
             self.dino = dino
             self.mlp_input_dim = 512
         elif self.backbone == 'cnn2':
@@ -197,6 +198,10 @@ class DINOSeg(pl.LightningModule):
             dino = get_dino_cnn(device='cpu')
             dino = torch.nn.Sequential(dino.conv1, dino.bn1, dino.relu, dino.maxpool, dino.layer1, dino.layer2,
                                        dino.layer3[0], dino.layer3[1])
+
+            # Remove the last activation
+            dino[-1].relu = nn.Identity()
+
             self.dino = dino
 
             # On 480x480 data, this backbone will output a (1024, 30, 30) feature map. We add an upconv block
@@ -209,6 +214,7 @@ class DINOSeg(pl.LightningModule):
             self.mlp_input_dim = 512
 
 
+
         # Load segmentation head
         if head == 'linear':
             self.clf = Linear(self.n_classes)
@@ -216,6 +222,7 @@ class DINOSeg(pl.LightningModule):
             self.clf = MLP(self.n_classes, input_dim=self.mlp_input_dim)
 
         # Save hyperparameters to checkpoint
+        print(self)
         self.save_hyperparameters()
 
         # Paths to real train data
