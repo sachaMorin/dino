@@ -222,7 +222,6 @@ class DINOSeg(pl.LightningModule):
             self.clf = MLP(self.n_classes, input_dim=self.mlp_input_dim)
 
         # Save hyperparameters to checkpoint
-        print(self)
         self.save_hyperparameters()
 
         # Paths to real train data
