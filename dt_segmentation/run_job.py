@@ -64,6 +64,9 @@ for _, exp_params in schedule.iterrows():
     params['write_path'] = args.write_path
     params['comet_tag'] = args.comet_tag
 
+    print('Running experiment using config : ')
+    print(params)
+
     try:
         run_experiment(**params)
     except Exception as e:

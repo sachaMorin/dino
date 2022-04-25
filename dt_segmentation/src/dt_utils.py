@@ -4,6 +4,7 @@ from __future__ import print_function
 import os
 import torch
 
+from torchvision.models import resnet50
 from torchvision import transforms as pth_transforms
 from PIL import Image
 
@@ -24,6 +25,17 @@ def get_dino(patch_size=8, device=DEVICE):
     model.to(device)
     state_dict = torch.hub.load_state_dict_from_url(url="https://dl.fbaipublicfiles.com/dino/" + url)
     model.load_state_dict(state_dict, strict=True)
+
+    return model
+
+def get_dino_cnn(device=DEVICE):
+    """Load vit_small model and send to device."""
+    # From the original DINO code
+    # Build model
+    # model = resnet50(pretrained=False)
+    model = torch.hub.load('facebookresearch/dino:main', 'dino_resnet50')
+    # model.to(device)
+    # model.load_state_dict(state_dict, strict=True)
 
     return model
 

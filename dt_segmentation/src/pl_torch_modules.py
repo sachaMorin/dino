@@ -27,7 +27,7 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 
-from .dt_utils import get_dino
+from .dt_utils import get_dino, get_dino_cnn
 
 
 def get_transforms(resolution=480):
@@ -108,9 +108,9 @@ class DuckieSegDataset(Dataset):
 class MLP(torch.nn.Module):
     """MLP for patch segmentation."""
 
-    def __init__(self, n_classes):
+    def __init__(self, n_classes, input_dim):
         super().__init__()
-        self.layer_1 = nn.Linear(384, 200)
+        self.layer_1 = nn.Linear(input_dim, 200)
         self.layer_2 = nn.Linear(200, 100)
         self.layer_3 = nn.Linear(100, n_classes)
 
@@ -143,7 +143,8 @@ class DINOSeg(pl.LightningModule):
 
     def __init__(self, data_path, write_path, class_names=None, head='linear', n_blocks=1,
                  batch_size=1, lr=1e-6, optimizer=AdamW, freeze_backbone=True, max_epochs=200, patience=10,
-                 grayscale=False, n_classes=7, pretrain_on_sim=False, comet_logger=None, augmented=True, random_init=False):
+                 grayscale=False, n_classes=7, pretrain_on_sim=False, comet_logger=None, augmented=True, random_init=False,
+                 backbone='vit'):
         super().__init__()
         self.n_blocks = n_blocks
         self.head = head
@@ -160,6 +161,8 @@ class DINOSeg(pl.LightningModule):
         self.pretrain_on_sim = pretrain_on_sim
         self.augmented = augmented
         self.random_init = random_init
+        self.backbone = backbone
+        self.mlp_input_dim = None
 
         # Vanilla transforms. Handy for inference
         # You can change resolution with the set_resolution method
@@ -167,21 +170,50 @@ class DINOSeg(pl.LightningModule):
         self.transforms = get_transforms(self.resolution)
 
         # First load dino to "cpu"
-        dino = get_dino(8, device='cpu')
+        if self.backbone == 'vit':
+            dino = get_dino(8, device='cpu')
 
-        # Only keep n_blocks
-        dino.blocks = dino.blocks[:n_blocks]
-        self.dino = dino
+            # Only keep n_blocks
+            dino.blocks = dino.blocks[:n_blocks]
+            self.dino = dino
+            self.mlp_input_dim = 384
 
-        # Random init for the backbone
-        if random_init:
-            self.dino.apply(self.dino._init_weights)
+            # Random init for the backbone
+            if random_init:
+                self.dino.apply(self.dino._init_weights)
+        elif self.backbone == 'cnn1':
+            # Shallow CNN. Rough benchmark for ViT 1-block
+            dino = get_dino_cnn(device='cpu')
+
+            # Remove the last activation in layer 2
+            dino.layer2[3].relu = nn.Identity()
+
+            # Only keep the first layers
+            dino = nn.Sequential(dino.conv1, dino.bn1, dino.relu, dino.maxpool, dino.layer1, dino.layer2)
+            self.dino = dino
+            self.mlp_input_dim = 512
+        elif self.backbone == 'cnn2':
+            # Deeper CNN. Rough benchmark for ViT 3-block
+            dino = get_dino_cnn(device='cpu')
+            dino = torch.nn.Sequential(dino.conv1, dino.bn1, dino.relu, dino.maxpool, dino.layer1, dino.layer2,
+                                       dino.layer3[0], dino.layer3[1])
+            self.dino = dino
+
+            # On 480x480 data, this backbone will output a (1024, 30, 30) feature map. We add an upconv block
+            # to upsample back to (512, 60, 60), then a conv layer to (384, 60, 60)
+            self.upconv = nn.ConvTranspose2d(1024, 512, kernel_size=1, stride=2, output_padding=1)
+            self.relu = nn.ReLU(inplace=True)
+
+            # Additional conv layer without activation (should not affect the feature map size)
+            self.conv = nn.Conv2d(512, 512, kernel_size=3, padding=1)
+            self.mlp_input_dim = 512
+
 
         # Load segmentation head
         if head == 'linear':
             self.clf = Linear(self.n_classes)
         elif head == 'mlp':
-            self.clf = MLP(self.n_classes)
+            self.clf = MLP(self.n_classes, input_dim=self.mlp_input_dim)
 
         # Save hyperparameters to checkpoint
         self.save_hyperparameters()
@@ -200,10 +232,20 @@ class DINOSeg(pl.LightningModule):
 
     def forward(self, x):
         # DINO + Patch segmentation head
-        x = self.dino(x)[:, 1:]
+        if self.backbone == 'vit':
+            # Remove CLS token
+            x = self.dino(x)[:, 1:]
+        else:
+            x = self.dino(x)
+            if self.backbone == 'cnn2':
+                x = self.upconv(x)
+                x = self.relu(x)
+                x = self.conv(x)
+            x = x.permute((0, 2, 3, 1))
 
         # Put all patches on same axis
         x = x.reshape((-1, x.shape[-1]))
+
         x = self.clf(x)
         return x
 

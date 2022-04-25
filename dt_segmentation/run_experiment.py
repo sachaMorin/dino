@@ -17,7 +17,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 
 def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, n_blocks, finetune, unfreeze=False, random_init=False,
-                   augmentations=False, pretrain_on_sim=False, ck_file_name=None, comet_tag=None, random_state=42, patience=10):
+                   augmentations=False, pretrain_on_sim=False, ck_file_name=None, comet_tag=None, random_state=42, patience=10, backbone='vit', optimizer='adam'):
     """Fit coarse segmentation model on Duckietown data. We use DINO as the backbone and output a prediction for
     every 8x8 token in the image.
 
@@ -33,10 +33,14 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, n_b
         Max epochs for training.
     learning_rate : float,
         Learning rate.
+    optimizer : str in {"adam", "adamw"},
+        Optimizer to use.
     patience : int,
         Patience for early stopping. Currently ignored.
+    backbone : str in {"vit", "cnn"},
+        Use DINO ViT or CNN (ResNet50) pretrained weights for the backbone.
     n_blocks : n_blocks,
-        Number of DINO blocks to use in the backbone. Should range from 1 to 12
+        Number of DINO blocks to use in the ViT backbone. Should range from 1 to 12
     finetune : bool,
         Initial training is done on the frozen backbone. If this is set to true, we then unfreeze the
         backbone and refit the data.
@@ -73,18 +77,22 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, n_b
     # Get class names and length
     class_names, _ = parse_class_names(os.path.join(data_path, 'labels.txt'))
 
-    optimizer = AdamW if unfreeze else Adam
+    # Optimizer
+    if optimizer == 'adam':
+        optimizer = Adam
+    elif optimizer == 'adamw':
+        optimizer = AdamW
 
     # MLP Head
     dino_seg = DINOSeg(head='mlp', data_path=data_path, pretrain_on_sim=pretrain_on_sim,
                          write_path=write_path, n_classes=len(class_names), class_names=class_names,
                          freeze_backbone=not unfreeze, optimizer=optimizer, lr=learning_rate, batch_size=batch_size,
                          n_blocks=n_blocks, max_epochs=epochs, patience=patience, comet_logger=comet_logger,
-                         augmented=augmentations, random_init=random_init)
+                         augmented=augmentations, random_init=random_init, backbone=backbone)
 
     if ck_file_name is None:
         # Generate a checkpoint file name
-        ck_file_name = str(n_blocks) + '_' + 'mlp_' + str(random_state)
+        ck_file_name = str(n_blocks) + '_' + f'{backbone}_mlp_' + str(random_state)
 
     dino_seg.fit(ck_file_name)
 
@@ -107,8 +115,8 @@ def run_experiment(data_path, write_path, batch_size, epochs, learning_rate, n_b
         # Only finetune with fewer than 5 blocks, might otherwise run out of GPU RAM
         dino_seg = DINOSeg.load_from_checkpoint(dino_seg.best_ck)
         dino_seg.freeze_backbone = False
-        dino_seg.optimizer = AdamW
-        dino_seg.lr /= 100  # Lower the learning rate for fine-tuning
+        dino_seg.optimizer = optimizer
+        # dino_seg.lr /= 100  # Lower the learning rate for fine-tuning
 
         # Add new comet logger
         dino_seg.comet_logger = comet_logger
@@ -125,7 +133,9 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", '-b', help="Batch size. Number of 480p images. 1 image = 3,600 image patches.", required=False, default=1, type=int)
     parser.add_argument("--epochs", '-e', help="Max number of training epochs", required=False, default=200, type=int)
     parser.add_argument("--learning_rate", '-lr', help="Learning rate", required=False, default=1e-3, type=float)
+    parser.add_argument("--optimizer", '-op', help="Optimizer", required=False, default="adam", type=str)
     parser.add_argument("--patience", '-p', help="Patience for early stopping (Not implemented).", required=False, default=200, type=int)
+    parser.add_argument("--backbone", '-ba', help="Use ViT or Resnet50 backbone.", required=False, default="vit", type=str)
     parser.add_argument("--n_blocks", help="Number of DINO blocks to use", required=False, default=1, type=int)
     parser.add_argument("--pretrain_on_sim", help="Pretrain on simulation data.", required=False, action='store_true')
     parser.add_argument("--finetune",
