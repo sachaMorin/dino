@@ -81,7 +81,7 @@
         </div>
 
 
-        <div class="row">
+        <div class="row" >
                 <div class="col-md-4 col-md-offset-4 text-center">
                     <ul class="nav nav-pills nav-justified">
                         <li>
@@ -106,7 +106,8 @@
                 </div>
         </div>
 
-
+        <!--Separator-->
+        <hr style="margin-top:-8px; width:100%">
 
         <div class="row">
             <div class="col-md-8 col-md-offset-2">
@@ -131,8 +132,7 @@
                     Abstract
                 </h3>
                 <p class="text-justify">
-In this work, we consider the problem of learning a perception model for monocular robot navigation using few annotated images. Using a Vision Transformer (ViT) pretrained with a label-free self-supervised method, we successfully train a coarse image segmentation model for the Duckietown environment using 70 training images. Our model performs coarse image segmentation at the 8x8 patch level, and the inference resolution can be adjusted to balance prediction granularity and real-time perception constraints.  We study how best to adapt a ViT to our task and environment, and find that some lightweight architectures can yield good single-image segmentations at a usable frame rate, even on CPU. The resulting perception model is used as the backbone for a simple yet robust visual servoing agent, which we deploy on a differential drive mobile robot to perform two tasks: lane following and obstacle avoidance.                </p>
-            </div>
+In this work, we consider the problem of learning a perception model for monocular robot navigation using few annotated images. Using a Vision Transformer (ViT) pretrained with a label-free self-supervised method, we successfully train a coarse image segmentation model for the Duckietown environment using 70 training images. Our model performs coarse image segmentation at the 8x8 patch level, and the inference resolution can be adjusted to balance prediction granularity and real-time perception constraints.  We study how best to adapt a ViT to our task and environment, and find that some lightweight architectures can yield good single-image segmentation at a usable frame rate, even on CPU. The resulting perception model is used as the backbone for a simple yet robust visual servoing agent, which we deploy on a differential drive mobile robot to perform two tasks: lane following and obstacle avoidance.            </div>
         </div>
 
         <!--        Add Youtube video???-->
@@ -154,11 +154,23 @@ In this work, we consider the problem of learning a perception model for monocul
                 <h3>
                     Pipeline
                 </h3>
+                <h4>
+                    <strong>Predictor </strong>
+                </h4>
                 <p class="text-justify">
                     We propose to train a classifier to predict labels for every 8x8 patch in an image. Our classifier is a fully-connected network which we apply over ViT patch encodings to predict a coarse segmentation mask:
                 </p>
                 <p style="text-align:center;">
                     <image src="img/pipeline.png" class="img-responsive" alt="scales">
+                </p>
+                <h4>
+                    <strong>Controller</strong>
+                </h4>
+                <p class="text-justify">
+                   The coarse segmentation output is used to compute a left (blue) and right (red) mask which are delivered to a potential-field based controller. The controller receives the mask and maps it as a "repulsive" potential to steer away from the half of the image with the most obstacle patches
+                </p>
+                <p style="text-align:center;">
+                    <image src="img/controller.png" class="img-responsive" alt="scales">
                 </p>
                 <h3>
                     Predictions
